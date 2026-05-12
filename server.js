@@ -137,6 +137,23 @@ db.exec(`
     FOREIGN KEY (performance_id) REFERENCES performances(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  -- 待确认队列：AI 从微信群消息解析出来的排练/路演候选
+  CREATE TABLE IF NOT EXISTS pending_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,         -- 是谁粘贴的
+    kind TEXT NOT NULL,               -- 'rehearsal' | 'performance'
+    song_id INTEGER,                  -- AI 猜测或用户指定的关联歌曲，可为 NULL
+    data TEXT NOT NULL,               -- JSON 序列化：date/time/location/outfit/notes/attendance...
+    raw_text TEXT NOT NULL DEFAULT '',-- 原始聊天片段（截断后存储，方便追溯）
+    ai_note TEXT NOT NULL DEFAULT '', -- AI 自己的解析说明 / 不确定之处
+    status TEXT NOT NULL DEFAULT 'pending', -- pending | confirmed | rejected
+    created_at INTEGER NOT NULL,
+    resolved_at INTEGER,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_items(user_id, status);
 `);
 console.log("✅ 数据库初始化完毕");
 
