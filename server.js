@@ -25,6 +25,11 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-only-change-me";
 const DB_PATH = process.env.DB_PATH || "./data/data.db";
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
+// AI 服务（默认 DeepSeek，OpenAI 兼容协议；可改成通义/Kimi 等同协议服务）
+const AI_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || "";
+const AI_BASE_URL = process.env.AI_BASE_URL || "https://api.deepseek.com";
+const AI_MODEL = process.env.AI_MODEL || "deepseek-chat";
+
 if (JWT_SECRET === "dev-only-change-me") {
   console.warn("⚠️  请在 .env 改 JWT_SECRET");
 }
