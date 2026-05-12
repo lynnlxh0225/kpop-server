@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>K-pop 随舞管理器</title>
+<style>
+  :root {
+    --pink: #ff5fa2; --pink-soft: #ffd6e8;
+    --purple: #a855f7; --purple-soft: #ede9fe;
+    --yellow: #fde047;
+    --bg: #fff7fb; --card: #fff;
+    --text: #1f1233; --text-soft: #6b5b7f;
+    --border: #f1d9e8;
+    --shadow: 0 6px 24px rgba(255, 95, 162, 0.08);
+    --success: #10b981; --warn: #f59e0b; --danger: #ef4444; --gray: #9ca3af;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--purple); text-decoration: none; cursor: pointer; }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select {
+    font-family: inherit; font-size: 14px;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; background: #fff; color: var(--text);
+    outline: none; width: 100%;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--pink);
+    box-shadow: 0 0 0 3px rgba(255,95,162,.15);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  label.field { display:block; font-size: 12px; font-weight:600; color: var(--text-soft); margin: 0 0 6px; }
+
+  .app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  header.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #ff8fc1 0%, #b574f3 100%);
+    color: white; border-radius: 18px; box-shadow: var(--shadow); gap: 12px; flex-wrap: wrap;
+  }
+  header.topbar h1 {
+    margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  header.topbar h1 .emoji { font-size: 20px; }
+  .my-code { font-size: 12px; opacity: 0.9; margin-top: 2px; font-family: "Monaco", monospace; }
+  header.topbar .actions { display: flex; gap: 8px; align-items: center; }
+  .icon-btn {
+    border: none; background: rgba(255,255,255,0.2); color: white;
+    padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 600;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.32); }
+  .user-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.2); color: white;
+    padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  }
+
+  nav.tabs {
+    display: flex; gap: 6px; margin: 16px 0 12px;
+    background: white; padding: 6px; border-radius: 14px;
+    box-shadow: var(--shadow); overflow-x: auto;
+  }
+  nav.tabs button {
+    flex: 1; border: none; background: transparent; color: var(--text-soft);
+    padding: 10px 14px; border-radius: 10px; font-weight: 600; font-size: 14px; white-space: nowrap;
+    position: relative;
+  }
+  nav.tabs button.active {
+    background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%); color: white;
+  }
+  nav.tabs button:not(.active):hover { background: var(--pink-soft); color: var(--pink); }
+  nav.tabs button .dot {
+    position: absolute; top: 6px; right: 6px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--danger);
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 12px; gap: 8px; }
+  .page-header h2 { margin: 0; font-size: 18px; }
+  .btn {
+    border: none;
+    background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%);
+    color: white; padding: 9px 16px; border-radius: 10px;
+    font-weight: 700; font-size: 13px;
+    box-shadow: 0 4px 12px rgba(168,85,247,.25);
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .btn.ghost { background: white; color: var(--pink); border: 1px solid var(--pink); box-shadow: none; }
+  .btn.danger { background: #fee2e2; color: var(--danger); box-shadow: none; }
+  .btn.small { padding: 6px 10px; font-size: 12px; }
+  .btn.block { width: 100%; }
+
+  .song-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .song-card {
+    background: var(--card); border-radius: 16px;
+    padding: 16px; box-shadow: var(--shadow);
+    border: 1px solid transparent; cursor: pointer;
+    transition: transform .15s, border-color .15s;
+    position: relative; overflow: hidden;
+  }
+  .song-card:hover { transform: translateY(-2px); border-color: var(--pink-soft); }
+  .song-card::before {
+    content: ""; position: absolute; top:0; left:0; right:0; height: 4px;
+    background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%);
+  }
+  .song-card.left::before { background: var(--gray); }
+  .song-card.left { opacity: 0.85; }
+  .song-card .title { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+  .song-card .artist { font-size: 13px; color: var(--text-soft); margin-bottom: 10px; }
+  .song-card .owner-line { font-size: 11px; color: var(--text-soft); margin-bottom: 10px; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; font-weight: 600; }
+  .badge.team   { background: var(--purple-soft); color: var(--purple); }
+  .badge.rehear { background: #fff4cc; color: #92670d; }
+  .badge.perf   { background: #d1fae5; color: #047857; }
+  .badge.type   { background: var(--pink-soft); color: var(--pink); }
+  .badge.role-owner  { background: #fef3c7; color: #92400e; }
+  .badge.role-member { background: var(--purple-soft); color: var(--purple); }
+  .badge.role-left   { background: #f3f4f6; color: var(--gray); }
+
+  .empty { text-align: center; padding: 48px 16px; color: var(--text-soft); }
+  .empty .emoji { font-size: 42px; display:block; margin-bottom: 8px; }
+
+  .back-btn {
+    background: none; border: none; color: var(--purple);
+    font-weight: 600; padding: 4px 0; margin-bottom: 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .detail-header {
+    background: linear-gradient(135deg, #ffd6e8 0%, #ede9fe 100%);
+    border-radius: 16px; padding: 18px 20px;
+    box-shadow: var(--shadow); margin-bottom: 14px;
+  }
+  .detail-header h2 { margin: 0 0 4px; font-size: 22px; }
+  .detail-header .meta { font-size: 14px; color: var(--text-soft); }
+  .role-banner {
+    margin-top: 10px; padding: 8px 12px;
+    border-radius: 10px; font-size: 12px; font-weight: 600;
+  }
+  .role-banner.owner { background: #fef3c7; color: #92400e; }
+  .role-banner.member { background: var(--purple-soft); color: var(--purple); }
+  .role-banner.left { background: #f3f4f6; color: var(--gray); }
+
+  .detail-tabs {
+    display: flex; gap: 4px; margin: 0 0 12px;
+    background: white; padding: 4px; border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .detail-tabs button {
+    flex: 1; border: none; background: transparent; padding: 9px 12px;
+    border-radius: 8px; font-weight: 600; color: var(--text-soft); font-size: 13px;
+  }
+  .detail-tabs button.active { background: var(--pink-soft); color: var(--pink); }
+  .subpage { display: none; }
+  .subpage.active { display: block; }
+
+  .item-card {
+    background: var(--card); border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 10px;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .item-card h4 { margin: 0 0 6px; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .item-card .row { font-size: 13px; color: var(--text-soft); margin: 2px 0; }
+  .item-card .actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--pink-soft); color: var(--pink);
+    padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    margin: 2px;
+  }
+  .chip.purple { background: var(--purple-soft); color: var(--purple); }
+  .chip.gray { background: #f3f4f6; color: var(--gray); }
+  .chip .avatar { font-size: 14px; }
+  .chip .pos { color: var(--text-soft); font-weight: 500; font-size: 11px; margin-left: 2px; }
+  .chip .leave-x { margin-left: 4px; color: var(--danger); cursor: pointer; font-weight: 700; }
+
+  .attendance-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 13px;
+  }
+  .attendance-row:last-child { border-bottom: none; }
+  .attendance-row .status-btns { display: flex; gap: 4px; }
+  .status-btn {
+    border: 1px solid var(--border); background: white; color: var(--text-soft);
+    padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  }
+  .status-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status-btn.active.yes { background: var(--success); color: white; border-color: var(--success); }
+  .status-btn.active.maybe { background: var(--warn); color: white; border-color: var(--warn); }
+  .status-btn.active.no { background: var(--danger); color: white; border-color: var(--danger); }
+
+  .my-att-bar {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    padding: 8px 12px; background: #fafafa; border-radius: 10px;
+    font-size: 13px;
+  }
+
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(31,18,51,0.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 50; padding: 16px;
+  }
+  .modal-bg.active { display: flex; }
+  .modal {
+    background: white; border-radius: 18px;
+    width: 100%; max-width: 480px;
+    max-height: 88vh; overflow-y: auto;
+    padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  }
+  .modal h3 { margin: 0 0 16px; font-size: 18px; }
+  .modal .form-grid { display: grid; gap: 12px; }
+  .modal .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+  .friend-picker {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 8px; border: 1px solid var(--border); border-radius: 10px;
+    min-height: 44px; background: #fafafa;
+  }
+  .picker-chip {
+    background: #f3f4f6; color: var(--text-soft);
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; cursor: pointer; user-select: none;
+    border: 1px solid transparent;
+  }
+  .picker-chip.selected {
+    background: var(--purple-soft); color: var(--purple);
+    border-color: var(--purple); font-weight: 600;
+  }
+  .position-list { display: grid; gap: 8px; margin-top: 8px; }
+  .position-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+  .position-row button { background: #fee2e2; color: var(--danger); border: none; padding: 6px 10px; border-radius: 8px; font-size: 12px; }
+
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: white;
+    padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    z-index: 100; opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s; max-width: 90%;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(4px); }
+  .toast.error { background: var(--danger); }
+
+  .friend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .friend-card {
+    background: var(--card); border-radius: 14px; padding: 12px 14px;
+    box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border);
+  }
+  .friend-card .av {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--pink-soft); display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .friend-card .info { flex: 1; min-width:0; }
+  .friend-card .info .name { font-weight: 700; font-size: 14px; }
+  .friend-card .info .since { font-size: 11px; color: var(--text-soft); }
+  .friend-card .del-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 4px; }
+
+  .request-card {
+    background: white; border-radius: 12px; padding: 12px 14px;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .request-card .av {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--pink-soft); display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .request-card .info { flex: 1; }
+  .request-card .info .name { font-weight: 700; font-size: 13px; }
+  .request-card .info .msg { font-size: 11px; color: var(--text-soft); }
+  .request-card .actions { display: flex; gap: 6px; }
+
+  .setting-card {
+    background: white; border-radius: 14px; padding: 18px;
+    box-shadow: var(--shadow); margin-bottom: 12px;
+  }
+  .setting-card h3 { margin: 0 0 8px; font-size: 15px; }
+  .setting-card p { margin: 0 0 12px; color: var(--text-soft); font-size: 13px; }
+
+  .invite-code-box {
+    display: flex; gap: 8px; align-items: center;
+    padding: 14px 16px; background: var(--purple-soft); border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .invite-code-box code {
+    flex: 1; font-size: 20px; font-weight: 800; color: var(--purple);
+    font-family: "Monaco", "Menlo", monospace; letter-spacing: 2px;
+  }
+  .copy-btn {
+    background: var(--purple); color: white; border: none;
+    padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  }
+
+  .auth-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: linear-gradient(135deg, #ffd6e8 0%, #ede9fe 100%);
+  }
+  .auth-card {
+    background: white; border-radius: 20px; padding: 32px 28px;
+    box-shadow: 0 20px 60px rgba(168,85,247,.2);
+    width: 100%; max-width: 400px;
+  }
+  .auth-card h2 {
+    margin: 0 0 6px; font-size: 22px;
+    background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .auth-card .sub { color: var(--text-soft); font-size: 13px; margin: 0 0 22px; }
+  .auth-toggle { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-soft); }
+  .auth-toggle a { font-weight: 600; }
+  .inviter-hint {
+    background: var(--pink-soft); color: var(--pink);
+    padding: 10px 14px; border-radius: 10px; margin-bottom: 14px;
+    font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+  }
+
+  @media (max-width: 600px) {
+    header.topbar h1 { font-size: 16px; }
+    .modal .row-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 登录注册 ============ -->
+<div class="auth-wrap" id="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div id="login-card">
+      <h2>💃 欢迎回来</h2>
+      <p class="sub">K-pop 随舞管理器 · 登录</p>
+      <div class="form-grid">
+        <div>
+          <label class="field">邮箱</label>
+          <input id="login-email" type="email" placeholder="你的邮箱" />
+        </div>
+        <div>
+          <label class="field">密码</label>
+          <input id="login-password" type="password" placeholder="至少 6 位" />
+        </div>
+        <button class="btn block" onclick="doLogin()">登 录</button>
+      </div>
+      <div class="auth-toggle">
+        还没账号？<a onclick="showRegister()">立即注册</a>
+      </div>
+    </div>
+    <div id="register-card" style="display:none">
+      <h2>💃 加入随舞圈</h2>
+      <p class="sub">注册新账号</p>
+      <div id="inviter-hint-box"></div>
+      <div class="form-grid">
+        <div>
+          <label class="field">昵称</label>
+          <input id="reg-name" placeholder="比如 Lynn" />
+        </div>
+        <div>
+          <label class="field">邮箱</label>
+          <input id="reg-email" type="email" placeholder="登录用，记得填真实的" />
+        </div>
+        <div>
+          <label class="field">密码</label>
+          <input id="reg-password" type="password" placeholder="至少 6 位" />
+        </div>
+        <div>
+          <label class="field">头像 emoji（可选）</label>
+          <input id="reg-avatar" placeholder="🌸 / 🐰 / 🦋" maxlength="4" />
+        </div>
+        <div>
+          <label class="field">邀请码 <span style="color:var(--text-soft);font-weight:normal;">（朋友给你的，没有就留空）</span></label>
+          <input id="reg-invite" placeholder="8 位字符" />
+        </div>
+        <button class="btn block" onclick="doRegister()">注 册</button>
+      </div>
+      <div class="auth-toggle">已有账号？<a onclick="showLogin()">去登录</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 主应用 ============ -->
+<div class="app" id="main-app" style="display:none">
+  <header class="topbar">
+    <div>
+      <h1><span class="emoji">💃</span> K-pop 随舞管理器</h1>
+      <div class="my-code" id="myCodeView"></div>
+    </div>
+    <div class="actions">
+      <span class="user-chip" id="userChip"></span>
+      <button class="icon-btn" onclick="refreshAll()" title="刷新">🔄</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="songs">🎵 歌曲</button>
+    <button class="tab-btn" data-tab="friends">👯 好友<span class="dot" id="friendsDot" style="display:none"></span></button>
+    <button class="tab-btn" data-tab="settings">⚙️ 设置</button>
+  </nav>
+
+  <!-- 歌曲列表 -->
+  <section class="page active" id="page-songs">
+    <div class="page-header">
+      <h2>我的歌曲</h2>
+      <button class="btn" onclick="openSongModal()">+ 新建歌曲</button>
+    </div>
+    <div id="songList"></div>
+  </section>
+
+  <!-- 歌曲详情 -->
+  <section class="page" id="page-song-detail">
+    <button class="back-btn" onclick="switchTab('songs')">← 返回</button>
+    <div class="detail-header">
+      <h2 id="detailTitle"></h2>
+      <div class="meta" id="detailMeta"></div>
+      <div class="role-banner" id="roleBanner"></div>
+      <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;" id="detailActions"></div>
+    </div>
+    <div class="detail-tabs">
+      <button class="sub-tab-btn active" data-sub="team">👥 队伍</button>
+      <button class="sub-tab-btn" data-sub="rehearsal">📅 排练</button>
+      <button class="sub-tab-btn" data-sub="performance">🎤 路演</button>
+    </div>
+    <div class="subpage active" id="sub-team"></div>
+    <div class="subpage" id="sub-rehearsal"></div>
+    <div class="subpage" id="sub-performance"></div>
+  </section>
+
+  <!-- 好友页 -->
+  <section class="page" id="page-friends">
+    <div class="page-header">
+      <h2>好友</h2>
+      <button class="btn" onclick="openAddFriendModal()">+ 添加好友</button>
+    </div>
+    <div id="friendRequestsBox"></div>
+    <div id="friendList"></div>
+  </section>
+
+  <!-- 设置页 -->
+  <section class="page" id="page-settings">
+    <div class="page-header"><h2>设置</h2></div>
+    <div class="setting-card">
+      <h3>我的邀请码</h3>
+      <p>把下面的邀请码或邀请链接发给朋友，她们注册时填这个码就会自动成为你的好友。</p>
+      <div class="invite-code-box">
+        <code id="myInviteCode">--------</code>
+        <button class="copy-btn" onclick="copyMyCode()">复制</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="myInviteLink" readonly />
+        <button class="copy-btn" onclick="copyMyLink()">复制链接</button>
+      </div>
+      <button class="btn ghost small" onclick="regenerateMyInvite()" style="margin-top:8px;">🔄 重置邀请码（旧的立即失效）</button>
+    </div>
+    <div class="setting-card">
+      <h3>账号</h3>
+      <p>邮箱：<span id="setEmail"></span></p>
+      <p>昵称：<span id="setName"></span> · 头像：<span id="setAvatar"></span></p>
+      <button class="btn ghost small" onclick="openEditProfileModal()">编辑资料</button>
+      <button class="btn danger small" onclick="logout()" style="margin-left:8px;">退出登录</button>
+    </div>
+    <div class="setting-card">
+      <h3>数据导出</h3>
+      <p>导出我能看到的所有歌曲数据 JSON 备份。</p>
+      <button class="btn ghost" onclick="exportData()">⬇ 导出 JSON</button>
+    </div>
+  </section>
+</div>
+
+<!-- ============ 弹窗 ============ -->
+
+<!-- 新建/编辑歌曲 -->
+<div class="modal-bg" id="songModal">
+  <div class="modal">
+    <h3 id="songModalTitle">新建歌曲</h3>
+    <div class="form-grid">
+      <div>
+        <label class="field">歌曲名 *</label>
+        <input id="songTitle" placeholder="例如：Whiplash" />
+      </div>
+      <div class="row-2">
+        <div>
+          <label class="field">原唱 / 组合</label>
+          <input id="songArtist" placeholder="例如：aespa" />
+        </div>
+        <div>
+          <label class="field">类型</label>
+          <select id="songType">
+            <option value="new">新歌</option>
+            <option value="classic">经典老歌</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="field">备注 / 灵感</label>
+        <textarea id="songNotes" placeholder="例如：第二段副歌想跟原版换位..."></textarea>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('songModal')">取消</button>
+      <button class="btn" onclick="saveSong()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加成员到歌曲 -->
+<div class="modal-bg" id="addMemberModal">
+  <div class="modal">
+    <h3>从好友里添加成员</h3>
+    <p style="font-size:13px;color:var(--text-soft);">只能添加你的好友，没有可加的人就先去「好友」页添加好友。</p>
+    <div>
+      <label class="field">选择好友</label>
+      <div class="friend-picker" id="addMemberPicker"></div>
+    </div>
+    <div style="margin-top:12px;">
+      <label class="field">位置 / 担当</label>
+      <input id="newMemberPosition" placeholder="例如：Karina (Center)" />
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('addMemberModal')">取消</button>
+      <button class="btn" onclick="addMemberToSong()">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 排练 -->
+<div class="modal-bg" id="rehearsalModal">
+  <div class="modal">
+    <h3 id="rehearsalModalTitle">添加排练</h3>
+    <div class="form-grid">
+      <div class="row-2">
+        <div>
+          <label class="field">日期 *</label>
+          <input id="rehDate" type="date" />
+        </div>
+        <div>
+          <label class="field">时间</label>
+          <input id="rehTime" placeholder="例如：14:00-17:00" />
+        </div>
+      </div>
+      <div>
+        <label class="field">地点</label>
+        <input id="rehLocation" placeholder="例如：北京·U-Studio 朝阳店" />
+      </div>
+      <div>
+        <label class="field">服装要求</label>
+        <input id="rehOutfit" placeholder="例如：黑色短袖 + 牛仔短裤" />
+      </div>
+      <div>
+        <label class="field">备注</label>
+        <textarea id="rehNotes"></textarea>
+      </div>
+      <div>
+        <label class="field">出席预填（车主可帮所有人预设，成员可在歌曲页改自己的）</label>
+        <div id="rehAttendance" style="border:1px solid var(--border);border-radius:10px;padding:8px;background:#fafafa;"></div>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('rehearsalModal')">取消</button>
+      <button class="btn" onclick="saveRehearsal()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 路演 -->
+<div class="modal-bg" id="perfModal">
+  <div class="modal">
+    <h3 id="perfModalTitle">添加路演</h3>
+    <div class="form-grid">
+      <div>
+        <label class="field">活动名称 *</label>
+        <input id="perfName" placeholder="例如：三里屯太古里随舞" />
+      </div>
+      <div class="row-2">
+        <div>
+          <label class="field">城市</label>
+          <input id="perfCity" placeholder="北京 / 上海" value="北京" />
+        </div>
+        <div>
+          <label class="field">日期 *</label>
+          <input id="perfDate" type="date" />
+        </div>
+      </div>
+      <div class="row-2">
+        <div>
+          <label class="field">时间</label>
+          <input id="perfTime" placeholder="例如：18:00" />
+        </div>
+        <div>
+          <label class="field">状态</label>
+          <select id="perfStatus">
+            <option value="planned">计划中</option>
+            <option value="confirmed">已确认</option>
+            <option value="done">已完成</option>
+            <option value="canceled">已取消</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="field">地点</label>
+        <input id="perfLocation" placeholder="例如：三里屯太古里南区" />
+      </div>
+      <div>
+        <label class="field">装搭</label>
+        <input id="perfOutfit" placeholder="例如：原版MV同款" />
+      </div>
+      <div>
+        <label class="field">备注</label>
+        <textarea id="perfNotes"></textarea>
+      </div>
+      <div>
+        <label class="field">出席预填</label>
+        <div id="perfAttendance" style="border:1px solid var(--border);border-radius:10px;padding:8px;background:#fafafa;"></div>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('perfModal')">取消</button>
+      <button class="btn" onclick="savePerformance()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加好友 -->
+<div class="modal-bg" id="addFriendModal">
+  <div class="modal">
+    <h3>添加好友</h3>
+    <p style="font-size:13px;color:var(--text-soft);">输入对方的 8 位邀请码，发送好友申请，对方接受后才会成为好友。</p>
+    <div class="form-grid">
+      <div>
+        <label class="field">对方邀请码</label>
+        <input id="addFriendCode" placeholder="例如：AB12CD34" maxlength="10" />
+      </div>
+      <div>
+        <label class="field">附言（可选）</label>
+        <input id="addFriendMsg" placeholder="例如：我是Lynn的朋友" maxlength="100" />
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('addFriendModal')">取消</button>
+      <button class="btn" onclick="sendFriendRequest()">发送申请</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑资料 -->
+<div class="modal-bg" id="editProfileModal">
+  <div class="modal">
+    <h3>编辑资料</h3>
+    <div class="form-grid">
+      <div>
+        <label class="field">昵称</label>
+        <input id="editName" />
+      </div>
+      <div>
+        <label class="field">头像 emoji</label>
+        <input id="editAvatar" maxlength="4" />
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('editProfileModal')">取消</button>
+      <button class="btn" onclick="saveProfile()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===================== API =====================
+  const API = {
+    get token() { return localStorage.getItem("kpop_token"); },
+    set token(v) {
+      if (v) localStorage.setItem("kpop_token", v);
+      else localStorage.removeItem("kpop_token");
+    },
+    async req(method, url, body) {
+      const headers = { "Content-Type": "application/json" };
+      if (this.token) headers.Authorization = "Bearer " + this.token;
+      let res;
+      try {
+        res = await fetch("/api" + url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      } catch (e) { throw new Error("网络错误"); }
+      let data = {};
+      try { data = await res.json(); } catch {}
+      if (res.status === 401) { this.token = null; showAuth(); throw new Error(data.error || "登录已过期"); }
+      if (!res.ok) throw new Error(data.error || `请求失败 (${res.status})`);
+      return data;
+    },
+    get(u)    { return this.req("GET", u); },
+    post(u,b) { return this.req("POST", u, b); },
+    patch(u,b){ return this.req("PATCH", u, b); },
+    put(u,b)  { return this.req("PUT", u, b); },
+    del(u)    { return this.req("DELETE", u); },
+  };
+
+  // ===================== 状态 =====================
+  let state = {
+    user: null,
+    friends: [],
+    incomingRequests: [],
+    outgoingRequests: [],
+    songs: [],
+  };
+  function findSong(id) { return state.songs.find(s => s.id === id); }
+  function findFriend(uid) { return state.friends.find(f => f.id === uid); }
+
+  // ===================== 启动 =====================
+  async function boot() {
+    const urlParams = new URLSearchParams(location.search);
+    const invite = urlParams.get("invite");
+    if (invite && !API.token) {
+      showAuth();
+      showRegister();
+      document.getElementById("reg-invite").value = invite;
+      // 查询邀请人显示
+      try {
+        const r = await API.get(`/users/by-code/${encodeURIComponent(invite)}`);
+        document.getElementById("inviter-hint-box").innerHTML = `
+          <div class="inviter-hint">
+            ${r.user.avatar || '👤'} <strong>${escapeHtml(r.user.name)}</strong> 邀请你加入，注册后自动成为好友
+          </div>`;
+      } catch {}
+      return;
+    }
+    if (!API.token) return showAuth();
+    try {
+      await loadAll();
+      showApp();
+    } catch (e) { toast(e.message, true); showAuth(); }
+  }
+
+  function showAuth() {
+    document.getElementById("auth-screen").style.display = "flex";
+    document.getElementById("main-app").style.display = "none";
+  }
+  function showApp() {
+    document.getElementById("auth-screen").style.display = "none";
+    document.getElementById("main-app").style.display = "block";
+  }
+  function showRegister() {
+    document.getElementById("login-card").style.display = "none";
+    document.getElementById("register-card").style.display = "block";
+  }
+  function showLogin() {
+    document.getElementById("login-card").style.display = "block";
+    document.getElementById("register-card").style.display = "none";
+  }
+
+  // ===================== 认证 =====================
+  async function doLogin() {
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    if (!email || !password) return toast("请填写邮箱和密码", true);
+    try {
+      const r = await API.post("/auth/login", { email, password });
+      API.token = r.token;
+      await loadAll();
+      showApp();
+    } catch (e) { toast(e.message, true); }
+  }
+  async function doRegister() {
+    const name = document.getElementById("reg-name").value.trim();
+    const email = document.getElementById("reg-email").value.trim();
+    const password = document.getElementById("reg-password").value;
+    const avatar = document.getElementById("reg-avatar").value.trim();
+    const inviteCode = document.getElementById("reg-invite").value.trim();
+    if (!name || !email || !password) return toast("请填完必填项", true);
+    try {
+      const r = await API.post("/auth/register", { name, email, password, avatar, inviteCode });
+      API.token = r.token;
+      if (r.autoFriend) toast(`欢迎！${r.autoFriend.avatar} ${r.autoFriend.name} 已自动加为好友`);
+      else toast("注册成功，欢迎～");
+      await loadAll();
+      showApp();
+    } catch (e) { toast(e.message, true); }
+  }
+  function logout() {
+    if (!confirm("确认退出登录？")) return;
+    API.token = null;
+    location.reload();
+  }
+
+  // ===================== 数据加载 =====================
+  async function loadAll() {
+    const me = await API.get("/auth/me");
+    state.user = me.user;
+    renderHeader();
+    await Promise.all([loadFriends(), loadRequests(), loadSongs()]);
+    renderSongs();
+    renderFriends();
+    renderSettings();
+  }
+  async function loadFriends() {
+    const r = await API.get("/friends");
+    state.friends = r.friends || [];
+  }
+  async function loadRequests() {
+    const r = await API.get("/friend-requests");
+    state.incomingRequests = r.incoming || [];
+    state.outgoingRequests = r.outgoing || [];
+    document.getElementById("friendsDot").style.display = state.incomingRequests.length ? "" : "none";
+  }
+  async function loadSongs() {
+    const r = await API.get("/songs");
+    state.songs = r.songs || [];
+  }
+  async function refreshAll() {
+    try {
+      await loadAll();
+      if (currentSongId) {
+        const s = findSong(currentSongId);
+        if (s) openSongDetail(currentSongId);
+        else switchTab("songs");
+      }
+      toast("已刷新");
+    } catch (e) { toast(e.message, true); }
+  }
+  function renderHeader() {
+    document.getElementById("userChip").innerHTML = `${state.user.avatar} ${escapeHtml(state.user.name)}`;
+    document.getElementById("myCodeView").textContent = `📣 我的邀请码 ${state.user.invite_code}`;
+  }
+
+  // ===================== Tab =====================
+  function switchTab(tab) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    const map = { songs: "page-songs", friends: "page-friends", settings: "page-settings", detail: "page-song-detail" };
+    document.getElementById(map[tab]).classList.add("active");
+    if (tab !== "detail") {
+      const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+      if (btn) btn.classList.add("active");
+    }
+  }
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
+
+  // ===================== 歌曲列表 =====================
+  function renderSongs() {
+    const list = document.getElementById("songList");
+    if (!state.songs.length) {
+      list.innerHTML = `<div class="empty"><span class="emoji">🎵</span><div>还没有歌曲，点右上角新建一首吧～</div></div>`;
+      return;
+    }
+    const html = state.songs.map(s => {
+      const activeTeam = (s.team || []).filter(t => t.status === 'active');
+      const rehCount = (s.rehearsals || []).length;
+      const perfCount = (s.performances || []).filter(p => p.status !== 'canceled').length;
+      let roleBadge = '';
+      if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">🚗 我是车主</span>';
+      else if (s.my_role === 'member') roleBadge = '<span class="badge role-member">🚪 已加入</span>';
+      else roleBadge = '<span class="badge role-left">已退出</span>';
+      return `
+        <div class="song-card ${s.my_role === 'left' ? 'left' : ''}" onclick="openSongDetail(${s.id})">
+          <div class="title">${escapeHtml(s.title)}</div>
+          <div class="artist">${escapeHtml(s.artist || "未知组合")}</div>
+          <div class="owner-line">🚗 车主：${escapeHtml(s.owner ? s.owner.name : '?')}</div>
+          <div class="badges">
+            ${roleBadge}
+            <span class="badge type">${s.type === 'new' ? '新歌' : '经典'}</span>
+            <span class="badge team">👥 ${activeTeam.length} 人</span>
+            <span class="badge rehear">📅 ${rehCount} 排</span>
+            <span class="badge perf">🎤 ${perfCount} 演</span>
+          </div>
+        </div>`;
+    }).join("");
+    list.innerHTML = `<div class="song-grid">${html}</div>`;
+  }
+
+  // ===================== 歌曲 CRUD =====================
+  let editingSongId = null;
+  function openSongModal(id) {
+    editingSongId = id || null;
+    document.getElementById("songModalTitle").textContent = id ? "编辑歌曲" : "新建歌曲";
+    const s = id ? findSong(id) : { title: "", artist: "", type: "new", notes: "" };
+    document.getElementById("songTitle").value = s.title || "";
+    document.getElementById("songArtist").value = s.artist || "";
+    document.getElementById("songType").value = s.type || "new";
+    document.getElementById("songNotes").value = s.notes || "";
+    openModal("songModal");
+  }
+  async function saveSong() {
+    const title = document.getElementById("songTitle").value.trim();
+    if (!title) return toast("请填写歌曲名", true);
+    const body = {
+      title,
+      artist: document.getElementById("songArtist").value.trim(),
+      type: document.getElementById("songType").value,
+      notes: document.getElementById("songNotes").value.trim(),
+    };
+    try {
+      if (editingSongId) await API.patch(`/songs/${editingSongId}`, body);
+      else await API.post(`/songs`, body);
+      await loadSongs();
+      renderSongs();
+      if (currentSongId === editingSongId) openSongDetail(currentSongId);
+      closeModal("songModal");
+      toast("已保存");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function deleteCurrentSong() {
+    if (!confirm("确认删除这首歌？所有排练/路演也会一起删除。")) return;
+    try {
+      await API.del(`/songs/${currentSongId}`);
+      await loadSongs();
+      renderSongs();
+      switchTab("songs");
+      toast("已删除");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function leaveCurrentSong() {
+    if (!confirm("确认退出这首歌？退出后只能查看历史记录，无法修改。")) return;
+    try {
+      await API.del(`/songs/${currentSongId}/members/${state.user.id}`);
+      await loadSongs();
+      renderSongs();
+      openSongDetail(currentSongId);
+      toast("已退出");
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // ===================== 歌曲详情 =====================
+  let currentSongId = null;
+  let currentSubtab = "team";
+  function openSongDetail(id) {
+    currentSongId = id;
+    const s = findSong(id);
+    if (!s) return;
+    document.getElementById("detailTitle").textContent = s.title;
+    document.getElementById("detailMeta").textContent =
+      `${s.artist || "未知组合"} · ${s.type === 'new' ? '新歌' : '经典'} · 车主 ${s.owner?.name || '?'}${s.notes ? ' · ' + s.notes : ''}`;
+    // 角色横幅
+    const banner = document.getElementById("roleBanner");
+    if (s.my_role === 'owner') {
+      banner.className = 'role-banner owner';
+      banner.textContent = '🚗 你是车主：可以修改所有信息';
+    } else if (s.my_role === 'member') {
+      banner.className = 'role-banner member';
+      banner.textContent = '🚪 你已加入这首歌：可以修改自己的出席状态';
+    } else {
+      banner.className = 'role-banner left';
+      banner.textContent = '👋 你已退出这首歌：只能查看历史记录';
+    }
+    // 顶部操作按钮
+    const actions = document.getElementById("detailActions");
+    let html = '';
+    if (s.my_role === 'owner') {
+      html += `<button class="btn small ghost" onclick="openSongModal(${s.id})">编辑歌曲信息</button>`;
+      html += `<button class="btn small danger" onclick="deleteCurrentSong()">删除歌曲</button>`;
+    } else if (s.my_role === 'member') {
+      html += `<button class="btn small danger" onclick="leaveCurrentSong()">退出歌曲</button>`;
+    }
+    actions.innerHTML = html;
+    switchTab("detail");
+    switchSubtab(currentSubtab);
+  }
+  function switchSubtab(name) {
+    currentSubtab = name;
+    document.querySelectorAll(".sub-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.sub === name));
+    document.querySelectorAll(".subpage").forEach(p => p.classList.remove("active"));
+    document.getElementById("sub-" + name).classList.add("active");
+    if (name === "team") renderTeam();
+    if (name === "rehearsal") renderRehearsals();
+    if (name === "performance") renderPerformances();
+  }
+  document.querySelectorAll(".sub-tab-btn").forEach(b => b.addEventListener("click", () => switchSubtab(b.dataset.sub)));
+
+  // ===================== 队伍页 =====================
+  function renderTeam() {
+    const s = findSong(currentSongId); if (!s) return;
+    const isOwner = s.my_role === 'owner';
+    const team = s.team || [];
+    const active = team.filter(t => t.status === 'active');
+    const left = team.filter(t => t.status === 'left');
+    let activeHtml = active.length
+      ? active.map(t => `
+          <span class="chip purple">
+            <span class="avatar">${t.avatar || '👤'}</span>${escapeHtml(t.name)}
+            <span class="pos">${escapeHtml(t.position || '未定位')}</span>
+            ${isOwner && t.user_id !== s.owner_id ? `<span class="leave-x" onclick="event.stopPropagation();removeSongMember(${t.user_id})" title="从歌曲移除">×</span>` : ''}
+          </span>`).join("")
+      : `<div style="color:var(--text-soft);font-size:13px;">还没有添加任何成员</div>`;
+    let leftHtml = left.length
+      ? `<div style="margin-top:14px;"><div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">已退出（历史）</div>${
+          left.map(t => `<span class="chip gray"><span class="avatar">${t.avatar || '👤'}</span>${escapeHtml(t.name)}</span>`).join("")
+        }</div>`
+      : '';
+    let actionHtml = isOwner ? `<button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>` : '';
+    document.getElementById("sub-team").innerHTML = `
+      <div class="page-header">
+        <h2 style="font-size:16px;">队伍（${active.length} 人）</h2>
+        ${actionHtml}
+      </div>
+      <div class="item-card">${activeHtml}${leftHtml}</div>
+      ${isOwner ? `<div style="margin-top:10px;font-size:12px;color:var(--text-soft);">💡 提示：要修改成员位置，去「设置」生成新邀请码后让 TA 重新加入，或者本地用 Postman 也行；下个版本会直接支持编辑位置</div>` : ''}
+    `;
+  }
+
+  // 添加成员到歌曲
+  let addMemberSelected = null;
+  function openAddMemberModal() {
+    const s = findSong(currentSongId); if (!s) return;
+    addMemberSelected = null;
+    document.getElementById("newMemberPosition").value = "";
+    const existingIds = new Set((s.team || []).filter(t => t.status === 'active').map(t => t.user_id));
+    const picker = document.getElementById("addMemberPicker");
+    const candidates = state.friends.filter(f => !existingIds.has(f.id));
+    if (!candidates.length) {
+      picker.innerHTML = `<div style="font-size:13px;color:var(--text-soft);">没有可添加的好友（要么已经在队伍里，要么还没加好友）</div>`;
+    } else {
+      picker.innerHTML = candidates.map(f =>
+        `<span class="picker-chip" onclick="selectAddMember(${f.id}, this)">${f.avatar || '👤'} ${escapeHtml(f.name)}</span>`
+      ).join("");
+    }
+    openModal("addMemberModal");
+  }
+  function selectAddMember(uid, el) {
+    document.querySelectorAll("#addMemberPicker .picker-chip").forEach(c => c.classList.remove("selected"));
+    el.classList.add("selected");
+    addMemberSelected = uid;
+  }
+  async function addMemberToSong() {
+    if (!addMemberSelected) return toast("请先选一个好友", true);
+    const position = document.getElementById("newMemberPosition").value.trim();
+    try {
+      await API.post(`/songs/${currentSongId}/members`, { user_id: addMemberSelected, position });
+      await loadSongs();
+      renderTeam();
+      renderSongs();
+      closeModal("addMemberModal");
+      toast("已添加");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function removeSongMember(uid) {
+    if (!confirm("将 TA 从这首歌移除？历史出席记录会保留。")) return;
+    try {
+      await API.del(`/songs/${currentSongId}/members/${uid}`);
+      await loadSongs();
+      renderTeam();
+      renderSongs();
+      toast("已移除");
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // ===================== 排练 =====================
+  function renderRehearsals() {
+    const s = findSong(currentSongId); if (!s) return;
+    const isOwner = s.my_role === 'owner';
+    const isLeft = s.my_role === 'left';
+    const list = (s.rehearsals || []).slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    const c = document.getElementById("sub-rehearsal");
+    const itemsHtml = list.length ? list.map(r => {
+      const myAtt = (r.attendance || []).find(a => a.user_id === state.user.id);
+      const attHtml = (r.attendance || []).map(a => {
+        const color = a.status === 'yes' ? 'success' : a.status === 'no' ? 'danger' : 'warn';
+        const txt = a.status === 'yes' ? '✓ 来' : a.status === 'no' ? '✗ 不来' : '? 待定';
+        return `<span class="chip" style="background:var(--purple-soft);color:var(--purple);">${a.avatar || '👤'} ${escapeHtml(a.name)} <span class="pos" style="color:var(--${color});">${txt}</span></span>`;
+      }).join("");
+      const myAttHtml = (!isLeft) ? `
+        <div class="my-att-bar">
+          <span>我的出席：</span>
+          <div class="status-btns">
+            <button class="status-btn ${myAtt?.status === 'yes' ? 'active yes' : ''}" onclick="setMyRehAtt(${r.id}, 'yes')">✓ 来</button>
+            <button class="status-btn ${myAtt?.status === 'maybe' ? 'active maybe' : ''}" onclick="setMyRehAtt(${r.id}, 'maybe')">? 待定</button>
+            <button class="status-btn ${myAtt?.status === 'no' ? 'active no' : ''}" onclick="setMyRehAtt(${r.id}, 'no')">✗ 不来</button>
+          </div>
+        </div>` : '';
+      const ownerActions = isOwner ? `
+        <button class="btn small ghost" onclick="openRehearsalModal(${r.id})">编辑</button>
+        <button class="btn small danger" onclick="deleteRehearsal(${r.id})">删除</button>` : '';
+      return `
+        <div class="item-card">
+          <h4>📅 ${escapeHtml(r.date || '日期未定')} ${escapeHtml(r.time || '')}</h4>
+          ${r.location ? `<div class="row">📍 ${escapeHtml(r.location)}</div>` : ''}
+          ${r.outfit ? `<div class="row">👗 服装：${escapeHtml(r.outfit)}</div>` : ''}
+          ${r.notes ? `<div class="row">📝 ${escapeHtml(r.notes)}</div>` : ''}
+          ${attHtml ? `<div style="margin-top:8px;">${attHtml}</div>` : ''}
+          ${myAttHtml}
+          ${ownerActions ? `<div class="actions">${ownerActions}</div>` : ''}
+        </div>`;
+    }).join("") : `<div class="empty"><span class="emoji">📅</span><div>还没有排练</div></div>`;
+    c.innerHTML = `
+      <div class="page-header">
+        <h2 style="font-size:16px;">排练（共 ${list.length} 次）</h2>
+        ${isOwner ? `<button class="btn small" onclick="openRehearsalModal()">+ 添加</button>` : ''}
+      </div>
+      ${itemsHtml}`;
+  }
+  let editingRehearsalId = null;
+  let rehDraftAttendance = [];
+  function openRehearsalModal(id) {
+    const s = findSong(currentSongId); if (!s) return;
+    if (s.my_role !== 'owner') return toast("仅车主可操作", true);
+    editingRehearsalId = id || null;
+    const r = id ? (s.rehearsals || []).find(x => x.id === id) : null;
+    document.getElementById("rehearsalModalTitle").textContent = id ? "编辑排练" : "添加排练";
+    document.getElementById("rehDate").value = r?.date || "";
+    document.getElementById("rehTime").value = r?.time || "";
+    document.getElementById("rehLocation").value = r?.location || "";
+    document.getElementById("rehOutfit").value = r?.outfit || "";
+    document.getElementById("rehNotes").value = r?.notes || "";
+    // 出席：已存在的取已存在的；否则用 active 队伍成员默认 maybe
+    const activeMembers = (s.team || []).filter(t => t.status === 'active');
+    if (r && r.attendance && r.attendance.length) {
+      // 合并：保留 active 成员，已退出的不显示
+      rehDraftAttendance = activeMembers.map(t => {
+        const exist = r.attendance.find(a => a.user_id === t.user_id);
+        return { user_id: t.user_id, status: exist?.status || 'maybe' };
+      });
+    } else {
+      rehDraftAttendance = activeMembers.map(t => ({ user_id: t.user_id, status: 'maybe' }));
+    }
+    renderRehAttendance();
+    openModal("rehearsalModal");
+  }
+  function renderRehAttendance() {
+    const s = findSong(currentSongId); if (!s) return;
+    const el = document.getElementById("rehAttendance");
+    if (!rehDraftAttendance.length) {
+      el.innerHTML = `<div style="font-size:12px;color:var(--text-soft);">先添加队伍成员</div>`;
+      return;
+    }
+    el.innerHTML = rehDraftAttendance.map((a, i) => {
+      const m = (s.team || []).find(t => t.user_id === a.user_id);
+      if (!m) return "";
+      return `
+        <div class="attendance-row">
+          <div>${m.avatar || '👤'} ${escapeHtml(m.name)}</div>
+          <div class="status-btns">
+            <button class="status-btn ${a.status === 'yes' ? 'active yes' : ''}" onclick="rehDraftAttendance[${i}].status='yes';renderRehAttendance()">✓ 来</button>
+            <button class="status-btn ${a.status === 'maybe' ? 'active maybe' : ''}" onclick="rehDraftAttendance[${i}].status='maybe';renderRehAttendance()">? 待定</button>
+            <button class="status-btn ${a.status === 'no' ? 'active no' : ''}" onclick="rehDraftAttendance[${i}].status='no';renderRehAttendance()">✗ 不来</button>
+          </div>
+        </div>`;
+    }).join("");
+  }
+  async function saveRehearsal() {
+    const date = document.getElementById("rehDate").value;
+    if (!date) return toast("请选择日期", true);
+    const body = {
+      date,
+      time: document.getElementById("rehTime").value.trim(),
+      location: document.getElementById("rehLocation").value.trim(),
+      outfit: document.getElementById("rehOutfit").value.trim(),
+      notes: document.getElementById("rehNotes").value.trim(),
+      attendance: rehDraftAttendance,
+    };
+    try {
+      if (editingRehearsalId) await API.patch(`/rehearsals/${editingRehearsalId}`, body);
+      else await API.post(`/songs/${currentSongId}/rehearsals`, body);
+      await loadSongs();
+      renderRehearsals();
+      renderSongs();
+      closeModal("rehearsalModal");
+      toast("已保存");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function deleteRehearsal(id) {
+    if (!confirm("删除这次排练？")) return;
+    try {
+      await API.del(`/rehearsals/${id}`);
+      await loadSongs();
+      renderRehearsals();
+      renderSongs();
+    } catch (e) { toast(e.message, true); }
+  }
+  async function setMyRehAtt(rehId, status) {
+    try {
+      await API.put(`/rehearsals/${rehId}/my-attendance`, { status });
+      await loadSongs();
+      renderRehearsals();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // ===================== 路演 =====================
+  function renderPerformances() {
+    const s = findSong(currentSongId); if (!s) return;
+    const isOwner = s.my_role === 'owner';
+    const isLeft = s.my_role === 'left';
+    const list = (s.performances || []).slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    const c = document.getElementById("sub-performance");
+    const statusMap = {
+      planned: { label: '计划中', bg: '#fef9c3', text: '#92670d' },
+      confirmed: { label: '已确认', bg: '#d1fae5', text: '#047857' },
+      done: { label: '已完成', bg: '#ede9fe', text: '#7c3aed' },
+      canceled: { label: '已取消', bg: '#f3f4f6', text: '#6b7280' },
+    };
+    const itemsHtml = list.length ? list.map(p => {
+      const st = statusMap[p.status] || statusMap.planned;
+      const myAtt = (p.attendance || []).find(a => a.user_id === state.user.id);
+      const attHtml = (p.attendance || []).map(a => {
+        const color = a.status === 'yes' ? 'success' : a.status === 'no' ? 'danger' : 'warn';
+        const txt = a.status === 'yes' ? '✓ 参演' : a.status === 'no' ? '✗ 不参' : '? 待定';
+        return `<span class="chip" style="background:#fff4cc;color:#92670d;">${a.avatar || '👤'} ${escapeHtml(a.name)} <span class="pos" style="color:var(--${color});">${txt}</span></span>`;
+      }).join("");
+      const myAttHtml = (!isLeft) ? `
+        <div class="my-att-bar">
+          <span>我是否参演：</span>
+          <div class="status-btns">
+            <button class="status-btn ${myAtt?.status === 'yes' ? 'active yes' : ''}" onclick="setMyPerfAtt(${p.id}, 'yes')">✓ 参演</button>
+            <button class="status-btn ${myAtt?.status === 'maybe' ? 'active maybe' : ''}" onclick="setMyPerfAtt(${p.id}, 'maybe')">? 待定</button>
+            <button class="status-btn ${myAtt?.status === 'no' ? 'active no' : ''}" onclick="setMyPerfAtt(${p.id}, 'no')">✗ 不参</button>
+          </div>
+        </div>` : '';
+      const ownerActions = isOwner ? `
+        <button class="btn small ghost" onclick="openPerfModal(${p.id})">编辑</button>
+        <button class="btn small danger" onclick="deletePerf(${p.id})">删除</button>` : '';
+      return `
+        <div class="item-card">
+          <h4>🎤 ${escapeHtml(p.name)} <span class="badge" style="background:${st.bg};color:${st.text};">${st.label}</span></h4>
+          <div class="row">📅 ${escapeHtml(p.date || '日期未定')} ${escapeHtml(p.time || '')}</div>
+          ${p.city || p.location ? `<div class="row">📍 ${escapeHtml(p.city || '')}${p.city && p.location ? ' · ' : ''}${escapeHtml(p.location || '')}</div>` : ''}
+          ${p.outfit ? `<div class="row">👗 装搭：${escapeHtml(p.outfit)}</div>` : ''}
+          ${p.notes ? `<div class="row">📝 ${escapeHtml(p.notes)}</div>` : ''}
+          ${attHtml ? `<div style="margin-top:8px;">${attHtml}</div>` : ''}
+          ${myAttHtml}
+          ${ownerActions ? `<div class="actions">${ownerActions}</div>` : ''}
+        </div>`;
+    }).join("") : `<div class="empty"><span class="emoji">🎤</span><div>还没有路演计划</div></div>`;
+    c.innerHTML = `
+      <div class="page-header">
+        <h2 style="font-size:16px;">路演活动（共 ${list.length} 场）</h2>
+        ${isOwner ? `<button class="btn small" onclick="openPerfModal()">+ 添加</button>` : ''}
+      </div>
+      ${itemsHtml}`;
+  }
+  let editingPerfId = null;
+  let perfDraftAttendance = [];
+  function openPerfModal(id) {
+    const s = findSong(currentSongId); if (!s) return;
+    if (s.my_role !== 'owner') return toast("仅车主可操作", true);
+    editingPerfId = id || null;
+    const p = id ? (s.performances || []).find(x => x.id === id) : null;
+    document.getElementById("perfModalTitle").textContent = id ? "编辑路演" : "添加路演";
+    document.getElementById("perfName").value = p?.name || "";
+    document.getElementById("perfCity").value = p?.city || "北京";
+    document.getElementById("perfDate").value = p?.date || "";
+    document.getElementById("perfTime").value = p?.time || "";
+    document.getElementById("perfStatus").value = p?.status || "planned";
+    document.getElementById("perfLocation").value = p?.location || "";
+    document.getElementById("perfOutfit").value = p?.outfit || "";
+    document.getElementById("perfNotes").value = p?.notes || "";
+    const activeMembers = (s.team || []).filter(t => t.status === 'active');
+    if (p && p.attendance && p.attendance.length) {
+      perfDraftAttendance = activeMembers.map(t => {
+        const exist = p.attendance.find(a => a.user_id === t.user_id);
+        return { user_id: t.user_id, status: exist?.status || 'maybe' };
+      });
+    } else {
+      perfDraftAttendance = activeMembers.map(t => ({ user_id: t.user_id, status: 'maybe' }));
+    }
+    renderPerfAttendance();
+    openModal("perfModal");
+  }
+  function renderPerfAttendance() {
+    const s = findSong(currentSongId); if (!s) return;
+    const el = document.getElementById("perfAttendance");
+    if (!perfDraftAttendance.length) {
+      el.innerHTML = `<div style="font-size:12px;color:var(--text-soft);">先添加队伍成员</div>`;
+      return;
+    }
+    el.innerHTML = perfDraftAttendance.map((a, i) => {
+      const m = (s.team || []).find(t => t.user_id === a.user_id);
+      if (!m) return "";
+      return `
+        <div class="attendance-row">
+          <div>${m.avatar || '👤'} ${escapeHtml(m.name)}</div>
+          <div class="status-btns">
+            <button class="status-btn ${a.status === 'yes' ? 'active yes' : ''}" onclick="perfDraftAttendance[${i}].status='yes';renderPerfAttendance()">✓ 参演</button>
+            <button class="status-btn ${a.status === 'maybe' ? 'active maybe' : ''}" onclick="perfDraftAttendance[${i}].status='maybe';renderPerfAttendance()">? 待定</button>
+            <button class="status-btn ${a.status === 'no' ? 'active no' : ''}" onclick="perfDraftAttendance[${i}].status='no';renderPerfAttendance()">✗ 不参</button>
+          </div>
+        </div>`;
+    }).join("");
+  }
+  async function savePerformance() {
+    const name = document.getElementById("perfName").value.trim();
+    if (!name) return toast("请填写活动名称", true);
+    const date = document.getElementById("perfDate").value;
+    if (!date) return toast("请选择日期", true);
+    const body = {
+      name, date,
+      city: document.getElementById("perfCity").value.trim(),
+      time: document.getElementById("perfTime").value.trim(),
+      status: document.getElementById("perfStatus").value,
+      location: document.getElementById("perfLocation").value.trim(),
+      outfit: document.getElementById("perfOutfit").value.trim(),
+      notes: document.getElementById("perfNotes").value.trim(),
+      attendance: perfDraftAttendance,
+    };
+    try {
+      if (editingPerfId) await API.patch(`/performances/${editingPerfId}`, body);
+      else await API.post(`/songs/${currentSongId}/performances`, body);
+      await loadSongs();
+      renderPerformances();
+      renderSongs();
+      closeModal("perfModal");
+      toast("已保存");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function deletePerf(id) {
+    if (!confirm("删除这场路演？")) return;
+    try {
+      await API.del(`/performances/${id}`);
+      await loadSongs();
+      renderPerformances();
+      renderSongs();
+    } catch (e) { toast(e.message, true); }
+  }
+  async function setMyPerfAtt(perfId, status) {
+    try {
+      await API.put(`/performances/${perfId}/my-attendance`, { status });
+      await loadSongs();
+      renderPerformances();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // ===================== 好友 =====================
+  function renderFriends() {
+    // 好友申请区
+    let reqBox = '';
+    if (state.incomingRequests.length || state.outgoingRequests.length) {
+      const incomingHtml = state.incomingRequests.map(r => `
+        <div class="request-card">
+          <div class="av">${r.from_avatar || '👤'}</div>
+          <div class="info">
+            <div class="name">${escapeHtml(r.from_name)} 想加你为好友</div>
+            <div class="msg">${escapeHtml(r.message || '')}</div>
+          </div>
+          <div class="actions">
+            <button class="btn small" onclick="acceptFriendRequest(${r.id})">✓ 接受</button>
+            <button class="btn small ghost" onclick="rejectFriendRequest(${r.id})">拒绝</button>
+          </div>
+        </div>`).join("");
+      const outgoingHtml = state.outgoingRequests.map(r => `
+        <div class="request-card">
+          <div class="av">${r.to_avatar || '👤'}</div>
+          <div class="info">
+            <div class="name">已向 ${escapeHtml(r.to_name)} 发送申请</div>
+            <div class="msg">等待对方接受</div>
+          </div>
+        </div>`).join("");
+      reqBox = `
+        ${state.incomingRequests.length ? `<h3 style="font-size:14px;margin:0 0 8px;color:var(--pink);">收到的申请（${state.incomingRequests.length}）</h3>${incomingHtml}` : ''}
+        ${state.outgoingRequests.length ? `<h3 style="font-size:14px;margin:14px 0 8px;color:var(--text-soft);">我发出的申请（${state.outgoingRequests.length}）</h3>${outgoingHtml}` : ''}
+        <div style="height:14px;"></div>
+      `;
+    }
+    document.getElementById("friendRequestsBox").innerHTML = reqBox;
+
+    const list = document.getElementById("friendList");
+    if (!state.friends.length) {
+      list.innerHTML = `<div class="empty"><span class="emoji">👯</span><div>还没有好友，点右上角添加一个吧</div></div>`;
+      return;
+    }
+    list.innerHTML = `<div class="friend-grid">${
+      state.friends.map(f => `
+        <div class="friend-card">
+          <div class="av">${f.avatar || '👤'}</div>
+          <div class="info">
+            <div class="name">${escapeHtml(f.name)}</div>
+            <div class="since">好友 · ${new Date(f.friended_at).toLocaleDateString()}</div>
+          </div>
+          <button class="del-btn" onclick="removeFriend(${f.id}, '${escapeAttr(f.name)}')" title="删除好友">✕</button>
+        </div>`).join("")
+    }</div>`;
+  }
+  function openAddFriendModal() {
+    document.getElementById("addFriendCode").value = "";
+    document.getElementById("addFriendMsg").value = "";
+    openModal("addFriendModal");
+  }
+  async function sendFriendRequest() {
+    const code = document.getElementById("addFriendCode").value.trim();
+    const message = document.getElementById("addFriendMsg").value.trim();
+    if (!code) return toast("请填邀请码", true);
+    try {
+      const r = await API.post("/friend-requests", { code, message });
+      if (r.accepted) toast(`✓ 已直接成为好友（对方先邀请过你）`);
+      else toast(`✓ 申请已发送给 ${r.target?.name || '对方'}`);
+      await loadFriends();
+      await loadRequests();
+      renderFriends();
+      closeModal("addFriendModal");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function acceptFriendRequest(id) {
+    try {
+      await API.post(`/friend-requests/${id}/accept`);
+      await loadFriends();
+      await loadRequests();
+      renderFriends();
+      toast("✓ 已成为好友");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function rejectFriendRequest(id) {
+    try {
+      await API.post(`/friend-requests/${id}/reject`);
+      await loadRequests();
+      renderFriends();
+      toast("已拒绝");
+    } catch (e) { toast(e.message, true); }
+  }
+  async function removeFriend(uid, name) {
+    if (!confirm(`确认删除好友「${name}」？\n注意：删除好友不影响 TA 已加入的歌曲。`)) return;
+    try {
+      await API.del(`/friends/${uid}`);
+      await loadFriends();
+      renderFriends();
+      toast("已删除好友");
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // ===================== 设置 =====================
+  function renderSettings() {
+    document.getElementById("setEmail").textContent = state.user.email;
+    document.getElementById("setName").textContent = state.user.name;
+    document.getElementById("setAvatar").textContent = state.user.avatar;
+    document.getElementById("myInviteCode").textContent = state.user.invite_code;
+    document.getElementById("myInviteLink").value = `${location.origin}/?invite=${state.user.invite_code}`;
+  }
+  // 兼容 HTTP 环境的复制（HTTPS 下用现代 API，HTTP 下用 execCommand 降级）
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      ta.style.opacity = "0";
+      ta.setAttribute("readonly", "");
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      try {
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error("复制失败"));
+      } catch (e) {
+        document.body.removeChild(ta);
+        reject(e);
+      }
+    });
+  }
+  function copyMyCode() {
+    copyToClipboard(state.user.invite_code)
+      .then(() => toast("邀请码已复制"))
+      .catch(() => toast("复制失败，请手动选中代码复制", true));
+  }
+  function copyMyLink() {
+    copyToClipboard(document.getElementById("myInviteLink").value)
+      .then(() => toast("链接已复制"))
+      .catch(() => toast("复制失败，请手动选中链接复制", true));
+  }
+  async function regenerateMyInvite() {
+    if (!confirm("重置后旧邀请码立即失效，已通过旧码加你的好友不受影响。继续？")) return;
+    try {
+      const r = await API.post("/auth/regenerate-invite");
+      state.user.invite_code = r.invite_code;
+      renderHeader();
+      renderSettings();
+      toast("已生成新邀请码");
+    } catch (e) { toast(e.message, true); }
+  }
+  function openEditProfileModal() {
+    document.getElementById("editName").value = state.user.name;
+    document.getElementById("editAvatar").value = state.user.avatar;
+    openModal("editProfileModal");
+  }
+  async function saveProfile() {
+    const name = document.getElementById("editName").value.trim();
+    const avatar = document.getElementById("editAvatar").value.trim();
+    if (!name) return toast("昵称不能为空", true);
+    try {
+      const r = await API.patch("/auth/me", { name, avatar });
+      state.user = r.user;
+      renderHeader();
+      renderSettings();
+      closeModal("editProfileModal");
+      toast("已保存");
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // ===================== 导出 =====================
+  function exportData() {
+    const blob = new Blob([JSON.stringify({
+      exportedAt: new Date().toISOString(),
+      me: state.user,
+      friends: state.friends,
+      songs: state.songs,
+    }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `kpop-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast("已导出");
+  }
+
+  // ===================== 通用 =====================
+  function openModal(id) { document.getElementById(id).classList.add("active"); }
+  function closeModal(id) { document.getElementById(id).classList.remove("active"); }
+  document.querySelectorAll(".modal-bg").forEach(bg => {
+    bg.addEventListener("click", e => { if (e.target === bg) bg.classList.remove("active"); });
+  });
+  function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s).replace(/'/g, "\\'"); }
+  let toastTimer;
+  function toast(msg, isError) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.toggle("error", !!isError);
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+  }
+  document.getElementById("login-password").addEventListener("keypress", e => { if (e.key === "Enter") doLogin(); });
+  document.getElementById("reg-invite").addEventListener("keypress", e => { if (e.key === "Enter") doRegister(); });
+
+  // 自动刷新（30秒）
+  setInterval(() => {
+    if (!state.user) return;
+    if (document.querySelector(".modal-bg.active")) return;
+    if (document.activeElement && ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+    loadAll().catch(() => {}).then(() => {
+      if (currentSongId && findSong(currentSongId)) switchSubtab(currentSubtab);
+    });
+  }, 30000);
+
+  boot();
+</script>
+</body>
+</html>
