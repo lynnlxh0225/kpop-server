@@ -677,16 +677,25 @@ app.put("/api/rehearsals/:id/my-attendance", authRequired, (req, res) => {
 });
 
 // ==================== 路演 ====================
+function sanitizeImagesArr(arr) {
+  if (!Array.isArray(arr)) return [];
+  // 只保留我们自己 /uploads/ 下的 URL，防止存外部链接被滥用
+  return arr
+    .filter((u) => typeof u === "string" && /^\/uploads\/[\w.-]+$/.test(u))
+    .slice(0, 24); // 单条最多 24 张
+}
+
 app.post("/api/songs/:sid/performances", authRequired, (req, res) => {
   const s = getSongOrFail(req, res); if (!s) return;
   if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可添加路演" });
-  const { name, city, date, time, location, outfit, status, notes, attendance } = req.body || {};
+  const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: "请填写活动名" });
   if (!date) return res.status(400).json({ error: "请填写日期" });
+  const imgs = JSON.stringify(sanitizeImagesArr(outfit_images));
   const r = db.prepare(`
-    INSERT INTO performances (song_id, name, city, date, time, location, outfit, status, notes, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(s.id, name.trim(), city || "", date, time || "", location || "", outfit || "", status || "planned", notes || "", now());
+    INSERT INTO performances (song_id, name, city, date, time, location, outfit, outfit_images, status, notes, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(s.id, name.trim(), city || "", date, time || "", location || "", outfit || "", imgs, status || "planned", notes || "", now());
   saveAttendance("performance", r.lastInsertRowid, attendance || [], s.id);
   res.json({ id: r.lastInsertRowid });
 });
@@ -697,14 +706,16 @@ app.patch("/api/performances/:id", authRequired, (req, res) => {
   if (!p) return res.status(404).json({ error: "路演不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(p.song_id);
   if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可修改" });
-  const { name, city, date, time, location, outfit, status, notes, attendance } = req.body || {};
-  db.prepare(`UPDATE performances SET name=?, city=?, date=?, time=?, location=?, outfit=?, status=?, notes=? WHERE id=?`).run(
+  const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance } = req.body || {};
+  const imgs = outfit_images !== undefined ? JSON.stringify(sanitizeImagesArr(outfit_images)) : p.outfit_images;
+  db.prepare(`UPDATE performances SET name=?, city=?, date=?, time=?, location=?, outfit=?, outfit_images=?, status=?, notes=? WHERE id=?`).run(
     name !== undefined ? name : p.name,
     city !== undefined ? city : p.city,
     date !== undefined ? date : p.date,
     time !== undefined ? time : p.time,
     location !== undefined ? location : p.location,
     outfit !== undefined ? outfit : p.outfit,
+    imgs,
     status !== undefined ? status : p.status,
     notes !== undefined ? notes : p.notes,
     id
