@@ -827,6 +827,11 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- 图片放大遮罩 -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation();" />
+</div>
+
 <script>
   // ===================== API =====================
   const API = {
