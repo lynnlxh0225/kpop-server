@@ -1099,14 +1099,18 @@
           left.map(t => `<span class="chip gray"><span class="avatar">${t.avatar || '👤'}</span>${escapeHtml(t.name)}</span>`).join("")
         }</div>`
       : '';
-    let actionHtml = isOwner ? `<button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>` : '';
+    let actionHtml = isOwner
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+           <button class="btn small ghost" onclick="openEditPositionsModal()">✏️ 编辑位置</button>
+           <button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>
+         </div>`
+      : '';
     document.getElementById("sub-team").innerHTML = `
       <div class="page-header">
         <h2 style="font-size:16px;">队伍（${active.length} 人）</h2>
         ${actionHtml}
       </div>
       <div class="item-card">${activeHtml}${leftHtml}</div>
-      ${isOwner ? `<div style="margin-top:10px;font-size:12px;color:var(--text-soft);">💡 提示：要修改成员位置，去「设置」生成新邀请码后让 TA 重新加入，或者本地用 Postman 也行；下个版本会直接支持编辑位置</div>` : ''}
     `;
   }
 
