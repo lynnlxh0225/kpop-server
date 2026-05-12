@@ -1585,6 +1585,184 @@
     } catch (e) { toast(e.message, true); }
   }
 
+  // ===================== 整理消息（待确认） =====================
+  function ownedSongs() {
+    return state.songs.filter(s => s.my_role === 'owner');
+  }
+
+  function renderInbox() {
+    // 歌曲下拉（只显示我作为车主的歌）
+    const sel = document.getElementById("parseSongId");
+    if (sel) {
+      const cur = sel.value;
+      const opts = ['<option value="">AI 自动判断</option>']
+        .concat(ownedSongs().map(s => `<option value="${s.id}">${escapeHtml(s.title)}${s.artist ? ' · ' + escapeHtml(s.artist) : ''}</option>`));
+      sel.innerHTML = opts.join('');
+      if (cur) sel.value = cur;
+    }
+
+    const list = document.getElementById("pendingList");
+    const countEl = document.getElementById("pendingCount");
+    if (countEl) countEl.textContent = state.pending.length;
+    if (!list) return;
+    if (!state.pending.length) {
+      list.innerHTML = `<div class="empty"><span class="emoji">📭</span><div>暂时没有待确认的条目</div></div>`;
+      return;
+    }
+    list.innerHTML = state.pending.map(renderPendingCard).join("");
+  }
+
+  function renderPendingCard(item) {
+    const d = item.data || {};
+    const isReh = item.kind === 'rehearsal';
+    const songOpts = ownedSongs().map(s =>
+      `<option value="${s.id}" ${item.song_id === s.id ? 'selected' : ''}>${escapeHtml(s.title)}</option>`
+    ).join("");
+    const songSelect = `
+      <select onchange="updatePendingSong(${item.id}, this.value)">
+        <option value="">⚠️ 请选歌曲${d.song_title_guess ? '（AI 猜：' + escapeHtml(d.song_title_guess) + '）' : ''}</option>
+        ${songOpts}
+      </select>`;
+
+    const att = Array.isArray(d.attendance) ? d.attendance : [];
+    const attHtml = att.length
+      ? att.map(a => `
+        <span class="att-chip status-${a.status}"
+              data-uid="${a.user_id}" data-status="${a.status}"
+              onclick="cyclePendingAtt(${item.id}, ${a.user_id}, this)"
+              title="点击切换：来 / 看看 / 不来；右键删除">
+          ${escapeHtml(a.name || ('用户' + a.user_id))} ${STATUS_MARK[a.status] || '?'}
+        </span>`).join('')
+      : '<span style="color:var(--text-soft);font-size:12px;">AI 没识别到出席信息</span>';
+
+    const id = item.id;
+    return `
+      <div class="pending-card ${isReh ? 'kind-reh' : 'kind-perf'}" data-id="${id}">
+        <div class="ph">
+          <span class="badge ${isReh ? 'rehear' : 'perf'}">${isReh ? '📅 排练' : '🎤 路演'}</span>
+          ${songSelect}
+        </div>
+        ${!isReh ? `
+          <div class="row-2">
+            <div><label class="field">活动名 *</label><input id="p_name_${id}" value="${escapeHtml(d.name || '')}" /></div>
+            <div><label class="field">城市</label><input id="p_city_${id}" value="${escapeHtml(d.city || '')}" /></div>
+          </div>` : ''}
+        <div class="row-2">
+          <div><label class="field">日期 *</label><input type="date" id="p_date_${id}" value="${escapeHtml(d.date || '')}" /></div>
+          <div><label class="field">时间</label><input id="p_time_${id}" value="${escapeHtml(d.time || '')}" placeholder="19:00" /></div>
+        </div>
+        <div class="single"><label class="field">地点</label><input id="p_location_${id}" value="${escapeHtml(d.location || '')}" /></div>
+        <div class="single"><label class="field">服装 / 装搭</label><input id="p_outfit_${id}" value="${escapeHtml(d.outfit || '')}" /></div>
+        <div class="single"><label class="field">备注</label><textarea id="p_notes_${id}">${escapeHtml(d.notes || '')}</textarea></div>
+        <div class="single">
+          <label class="field">出席预填（点击切换：来 / 看看 / 不来）</label>
+          <div class="att-chips" id="p_att_${id}">${attHtml}</div>
+        </div>
+        ${item.ai_note ? `<div class="ai-note">🤖 AI 备注：${escapeHtml(item.ai_note)}</div>` : ''}
+        <div class="actions">
+          <button class="btn" onclick="confirmPending(${id})">✅ 确认添加</button>
+          <button class="btn danger small" onclick="rejectPending(${id})">✗ 不要这条</button>
+        </div>
+      </div>`;
+  }
+
+  const STATUS_MARK = { yes: '✓ 来', no: '✗ 不来', maybe: '? 看看' };
+
+  function cyclePendingAtt(itemId, userId, el) {
+    const order = ['yes', 'maybe', 'no'];
+    const cur = el.dataset.status;
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    el.dataset.status = next;
+    el.className = `att-chip status-${next}`;
+    // 重写文字（保留名字，更新状态标记）
+    const name = el.textContent.trim().replace(/[✓✗?].*$/, '').trim();
+    el.innerHTML = `${escapeHtml(name)} ${STATUS_MARK[next]}`;
+  }
+
+  async function updatePendingSong(id, songId) {
+    const body = songId ? { song_id: parseInt(songId, 10) } : { song_id: null };
+    try {
+      await API.patch(`/pending/${id}`, body);
+      // 本地同步，不重渲染（避免输入框丢失）
+      const item = state.pending.find(p => p.id === id);
+      if (item) item.song_id = body.song_id;
+    } catch (e) { toast(e.message, true); }
+  }
+
+  function collectPendingFields(item) {
+    const id = item.id;
+    const d = { ...(item.data || {}) };
+    d.date     = document.getElementById(`p_date_${id}`).value.trim();
+    d.time     = document.getElementById(`p_time_${id}`).value.trim();
+    d.location = document.getElementById(`p_location_${id}`).value.trim();
+    d.outfit   = document.getElementById(`p_outfit_${id}`).value.trim();
+    d.notes    = document.getElementById(`p_notes_${id}`).value.trim();
+    if (item.kind === 'performance') {
+      d.name = (document.getElementById(`p_name_${id}`)?.value || '').trim();
+      d.city = (document.getElementById(`p_city_${id}`)?.value || '').trim();
+    }
+    // 出席：从 DOM 读
+    const attBox = document.getElementById(`p_att_${id}`);
+    const chips = attBox ? attBox.querySelectorAll('.att-chip[data-uid]') : [];
+    d.attendance = Array.from(chips).map(c => {
+      const name = c.textContent.trim().replace(/[✓✗?].*$/, '').trim();
+      return { user_id: parseInt(c.dataset.uid, 10), name, status: c.dataset.status };
+    });
+    return d;
+  }
+
+  async function confirmPending(id) {
+    const item = state.pending.find(p => p.id === id);
+    if (!item) return;
+    const data = collectPendingFields(item);
+    if (!item.song_id) return toast("请先在卡片顶部选关联歌曲", true);
+    if (!data.date) return toast("日期不能为空", true);
+    if (item.kind === 'performance' && !data.name) return toast("路演活动名不能为空", true);
+    try {
+      const r = await API.post(`/pending/${id}/confirm`, { data, song_id: item.song_id });
+      toast(`已添加到「${state.songs.find(s => s.id === r.song_id)?.title || '歌曲'}」`);
+      await Promise.all([loadPending(), loadSongs()]);
+      renderInbox();
+      renderSongs();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function rejectPending(id) {
+    if (!confirm("丢弃这条 AI 解析结果？")) return;
+    try {
+      await API.del(`/pending/${id}`);
+      await loadPending();
+      renderInbox();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function submitParse() {
+    const text = document.getElementById("parseText").value.trim();
+    if (!text) return toast("请先粘贴聊天记录", true);
+    if (ownedSongs().length === 0) return toast("你还不是任何歌曲的车主，先新建一首歌再来", true);
+    const songId = document.getElementById("parseSongId").value;
+    const btn = document.getElementById("parseBtn");
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "AI 整理中…（约 5-10 秒）";
+    try {
+      const r = await API.post("/parse", { text, song_id: songId ? parseInt(songId, 10) : null });
+      if (r.count === 0) {
+        toast("AI 没在这段聊天里识别到排练/路演 ☁️", true);
+      } else {
+        toast(`✨ 识别到 ${r.count} 条候选，请审核确认`);
+        document.getElementById("parseText").value = "";
+      }
+      await loadPending();
+      renderInbox();
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
   // ===================== 导出 =====================
   function exportData() {
     const blob = new Blob([JSON.stringify({
