@@ -707,6 +707,321 @@ function saveAttendance(kind, refId, items, songId) {
   tx();
 }
 
+// ==================== AI 解析（微信群消息整理） ====================
+async function callAI(messages) {
+  if (!AI_API_KEY) {
+    const err = new Error("后端未配置 AI key（DEEPSEEK_API_KEY），无法解析");
+    err.statusCode = 503;
+    throw err;
+  }
+  let res;
+  try {
+    res = await fetch(`${AI_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${AI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages,
+        temperature: 0.1,
+        max_tokens: 4000,
+        response_format: { type: "json_object" },
+      }),
+    });
+  } catch (e) {
+    throw new Error("AI 网络错误：" + e.message);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const err = new Error(`AI 服务返回 ${res.status}：${text.slice(0, 200)}`);
+    err.statusCode = 502;
+    throw err;
+  }
+  const data = await res.json();
+  const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!content) throw new Error("AI 返回内容为空");
+  return content;
+}
+
+function buildParseMessages({ user, friends, songs, text, hintSongId }) {
+  const today = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const weekDay = "日一二三四五六"[today.getDay()];
+
+  const people = [
+    { id: user.id, name: user.name, self: true },
+    ...friends.map((f) => ({ id: f.id, name: f.name })),
+  ];
+  const peopleText = people
+    .map((p) => `- id=${p.id} 名字="${p.name}"${p.self ? "（当前用户自己）" : ""}`)
+    .join("\n");
+
+  const songsText = songs.length
+    ? songs.map((s) => `- id=${s.id} 歌名="${s.title}"${s.artist ? ` 组合="${s.artist}"` : ""}`).join("\n")
+    : "（当前用户作为车主的歌曲列表为空）";
+
+  const hintLine = hintSongId
+    ? `用户提示：这段聊天主要在讨论 id=${hintSongId} 这首歌；如无明确反证请把所有 item 关联到这首歌。`
+    : "用户未指定关联歌曲。请你根据聊天内容把每条 item 关联到上面歌曲列表里的 id；判断不出时 song_id 留 null。";
+
+  const systemPrompt = `你是 K-pop 翻跳团队的微信群消息整理助手。任务：从用户粘贴的群聊文本里识别所有「排练（rehearsal）」和「路演（performance）」安排，输出严格 JSON。
+
+== 输出规则（务必严格遵守）==
+1. 只输出 JSON，不要 markdown 代码块、不要解释文字。
+2. 顶层结构：{"items": [...]}, items 是数组（可以为空）。
+3. 每个 item 必填字段：
+   - kind: "rehearsal" 或 "performance"
+   - song_id: 整数或 null（必须来自给定的歌曲列表）
+   - song_title_guess: 字符串，你认为对应的歌名（便于人工核对）
+   - date: "YYYY-MM-DD"。相对日期（明天/后天/周六/这周五）必须基于今天换算成绝对日期
+   - time: "HH:MM"（24 小时制）或 ""
+   - location: 字符串（地点）
+   - outfit: 字符串（服装/穿搭，没说就 ""）
+   - notes: 字符串（其他备注）
+   - attendance: 数组，每项 {"user_id": 整数, "name": 字符串, "status": "yes"|"no"|"maybe"}
+   - ai_note: 字符串，简要说明你的解析依据 / 不确定之处（中文，不超过 60 字）
+4. kind="performance" 额外字段：
+   - name: 活动名（必填，从聊天里抽取，没明说就用"xx 路演"或场地名）
+   - city: 城市，没说就 ""
+5. attendance 里只能引用上面"成员列表"提供的 user_id 和 name；群里出现但不在列表里的人忽略；没有明确出席态度的人不要列。
+6. 出席态度推断：
+   - "我去/我来/我到/+1/收到/好的/没问题" → yes
+   - "我不去/去不了/请假/不能来/没空" → no
+   - "我看看/再说/可能/不一定" → maybe
+7. 同一事件多次改动（先 7 点又改 8 点）→ 只输出最终版本。
+8. 没有任何排练/路演相关内容时输出 {"items": []}。
+9. 不要凭空生成日期；如果聊天里没提到具体日期，跳过这条。`;
+
+  const userPrompt = `== 上下文 ==
+今天日期：${todayStr}（周${weekDay}）
+当前用户：id=${user.id} 名字="${user.name}"
+
+成员列表（attendance 仅能引用这里的人）：
+${peopleText}
+
+可关联的歌曲列表（song_id 只能从这里选，否则 null）：
+${songsText}
+
+${hintLine}
+
+== 聊天记录开始 ==
+${text}
+== 聊天记录结束 ==
+
+按系统提示输出 JSON。`;
+
+  return [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
+}
+
+// AI 调用花钱 + 怕被刷，加限流：每用户每分钟最多 6 次
+const parseLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 6,
+  keyGenerator: (req) => `parse-${req.userId || req.ip}`,
+  message: { error: "解析太频繁了，等 1 分钟再试" },
+});
+
+// 粘贴聊天记录 → 调 AI → 写入 pending_items
+app.post("/api/parse", authRequired, parseLimiter, async (req, res) => {
+  const { text, song_id: hintRaw } = req.body || {};
+  if (!text || !text.toString().trim()) return res.status(400).json({ error: "请粘贴聊天记录" });
+  if (text.length > 50000) return res.status(400).json({ error: "聊天记录太长（上限 5 万字）" });
+
+  const hintSongId = hintRaw ? parseInt(hintRaw, 10) || null : null;
+  const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.userId);
+  const friends = db.prepare(`
+    SELECT u.id, u.name FROM friendships f
+    JOIN users u ON u.id = (CASE WHEN f.user_a_id=? THEN f.user_b_id ELSE f.user_a_id END)
+    WHERE f.user_a_id=? OR f.user_b_id=?
+  `).all(req.userId, req.userId, req.userId);
+  const ownedSongs = db.prepare("SELECT id, title, artist FROM songs WHERE owner_id=?").all(req.userId);
+  if (ownedSongs.length === 0) {
+    return res.status(400).json({ error: "你还不是任何歌曲的车主，请先新建一首歌再整理消息" });
+  }
+
+  let raw;
+  try {
+    const messages = buildParseMessages({ user, friends, songs: ownedSongs, text: text.toString(), hintSongId });
+    raw = await callAI(messages);
+  } catch (e) {
+    console.error("[parse] AI 调用失败:", e.message);
+    return res.status(e.statusCode || 502).json({ error: e.message || "AI 调用失败" });
+  }
+
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch {
+    console.error("[parse] AI 输出非 JSON:", raw.slice(0, 500));
+    return res.status(502).json({ error: "AI 输出不是合法 JSON，请重试" });
+  }
+
+  const items = Array.isArray(parsed && parsed.items) ? parsed.items : [];
+  const validSongIds = new Set(ownedSongs.map((s) => s.id));
+  const validUserIds = new Set([user.id, ...friends.map((f) => f.id)]);
+
+  const insertStmt = db.prepare(`
+    INSERT INTO pending_items (user_id, kind, song_id, data, raw_text, ai_note, created_at, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+  `);
+  const created = [];
+  const tx = db.transaction((arr) => {
+    for (const it of arr) {
+      const kind = it.kind === "performance" ? "performance" : "rehearsal";
+      if (!it.date) continue;
+      const songId = validSongIds.has(it.song_id) ? it.song_id : (hintSongId && validSongIds.has(hintSongId) ? hintSongId : null);
+      const att = Array.isArray(it.attendance)
+        ? it.attendance.filter((a) => a && validUserIds.has(a.user_id) && ["yes", "no", "maybe"].includes(a.status))
+        : [];
+      const data = {
+        kind,
+        song_id: songId,
+        song_title_guess: (it.song_title_guess || "").toString().slice(0, 100),
+        date: (it.date || "").toString().slice(0, 20),
+        time: (it.time || "").toString().slice(0, 10),
+        location: (it.location || "").toString().slice(0, 200),
+        outfit: (it.outfit || "").toString().slice(0, 200),
+        notes: (it.notes || "").toString().slice(0, 500),
+        attendance: att,
+      };
+      if (kind === "performance") {
+        data.name = (it.name || it.song_title_guess || "未命名活动").toString().slice(0, 100);
+        data.city = (it.city || "").toString().slice(0, 50);
+      }
+      const r = insertStmt.run(
+        req.userId, kind, songId,
+        JSON.stringify(data),
+        text.toString().slice(0, 5000),
+        (it.ai_note || "").toString().slice(0, 500),
+        now()
+      );
+      created.push({ id: r.lastInsertRowid, kind, ...data });
+    }
+  });
+  tx(items);
+
+  res.json({ created, count: created.length });
+});
+
+// 我的待确认列表
+app.get("/api/pending", authRequired, (req, res) => {
+  const rows = db.prepare(`
+    SELECT pi.*, s.title AS song_title, s.artist AS song_artist
+    FROM pending_items pi
+    LEFT JOIN songs s ON s.id = pi.song_id
+    WHERE pi.user_id = ? AND pi.status = 'pending'
+    ORDER BY pi.created_at DESC
+  `).all(req.userId);
+  const items = rows.map((r) => {
+    let data = {};
+    try { data = JSON.parse(r.data); } catch {}
+    return {
+      id: r.id,
+      kind: r.kind,
+      song_id: r.song_id,
+      song_title: r.song_title,
+      song_artist: r.song_artist,
+      ai_note: r.ai_note,
+      created_at: r.created_at,
+      data,
+    };
+  });
+  res.json({ items });
+});
+
+// 修改一条待确认项（字段或换关联歌曲）
+app.patch("/api/pending/:id", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const item = db.prepare("SELECT * FROM pending_items WHERE id=?").get(id);
+  if (!item) return res.status(404).json({ error: "待确认项不存在" });
+  if (item.user_id !== req.userId) return res.status(403).json({ error: "无权操作" });
+  if (item.status !== "pending") return res.status(400).json({ error: "已处理，无法修改" });
+  const updates = [];
+  const args = [];
+  if (req.body && req.body.data && typeof req.body.data === "object") {
+    updates.push("data=?");
+    args.push(JSON.stringify(req.body.data));
+  }
+  if (req.body && req.body.song_id !== undefined) {
+    if (req.body.song_id === null) {
+      updates.push("song_id=NULL");
+    } else {
+      const sid = parseInt(req.body.song_id, 10);
+      const owned = db.prepare("SELECT 1 FROM songs WHERE id=? AND owner_id=?").get(sid, req.userId);
+      if (!owned) return res.status(400).json({ error: "歌曲不存在或你不是车主" });
+      updates.push("song_id=?");
+      args.push(sid);
+    }
+  }
+  if (updates.length === 0) return res.json({ ok: true });
+  args.push(id);
+  db.prepare(`UPDATE pending_items SET ${updates.join(", ")} WHERE id=?`).run(...args);
+  res.json({ ok: true });
+});
+
+// 确认 → 写进真正的 rehearsals / performances 表
+app.post("/api/pending/:id/confirm", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const item = db.prepare("SELECT * FROM pending_items WHERE id=?").get(id);
+  if (!item) return res.status(404).json({ error: "待确认项不存在" });
+  if (item.user_id !== req.userId) return res.status(403).json({ error: "无权操作" });
+  if (item.status !== "pending") return res.status(400).json({ error: "已处理" });
+
+  let data;
+  try { data = JSON.parse(item.data); } catch { data = {}; }
+  if (req.body && req.body.data && typeof req.body.data === "object") {
+    data = { ...data, ...req.body.data };
+  }
+  let songId = item.song_id;
+  if (req.body && req.body.song_id !== undefined && req.body.song_id !== null) {
+    songId = parseInt(req.body.song_id, 10);
+  }
+  if (!songId) return res.status(400).json({ error: "请先选择关联歌曲" });
+  const song = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
+  if (!song) return res.status(404).json({ error: "歌曲不存在" });
+  if (song.owner_id !== req.userId) return res.status(403).json({ error: "你不是这首歌的车主" });
+  if (!data.date) return res.status(400).json({ error: "日期不能为空" });
+
+  let newId;
+  if (item.kind === "rehearsal") {
+    const r = db.prepare(`
+      INSERT INTO rehearsals (song_id, date, time, location, outfit, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(songId, data.date, data.time || "", data.location || "", data.outfit || "", data.notes || "", now());
+    newId = r.lastInsertRowid;
+    saveAttendance("rehearsal", newId, data.attendance || [], songId);
+  } else {
+    if (!data.name) return res.status(400).json({ error: "路演活动名不能为空" });
+    const r = db.prepare(`
+      INSERT INTO performances (song_id, name, city, date, time, location, outfit, status, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(songId, data.name, data.city || "", data.date, data.time || "", data.location || "", data.outfit || "", "planned", data.notes || "", now());
+    newId = r.lastInsertRowid;
+    saveAttendance("performance", newId, data.attendance || [], songId);
+  }
+
+  db.prepare("UPDATE pending_items SET status='confirmed', resolved_at=?, song_id=? WHERE id=?")
+    .run(now(), songId, id);
+
+  res.json({ ok: true, kind: item.kind, id: newId, song_id: songId });
+});
+
+// 拒绝（不入库，标记 rejected）
+app.delete("/api/pending/:id", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const item = db.prepare("SELECT * FROM pending_items WHERE id=?").get(id);
+  if (!item) return res.status(404).json({ error: "待确认项不存在" });
+  if (item.user_id !== req.userId) return res.status(403).json({ error: "无权操作" });
+  db.prepare("UPDATE pending_items SET status='rejected', resolved_at=? WHERE id=?")
+    .run(now(), id);
+  res.json({ ok: true });
+});
+
 // ==================== 错误处理 ====================
 app.use((err, req, res, next) => {
   console.error(err);
