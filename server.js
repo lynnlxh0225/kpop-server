@@ -1104,6 +1104,27 @@ app.delete("/api/pending/:id", authRequired, (req, res) => {
   res.json({ ok: true });
 });
 
+// ==================== 文件上传 ====================
+// 限流：单用户每分钟最多 20 次上传
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => `upload-${req.userId || req.ip}`,
+  message: { error: "上传太频繁，稍等一下" },
+});
+
+app.post("/api/upload", authRequired, uploadLimiter, (req, res) => {
+  uploader.array("files", 8)(req, res, (err) => {
+    if (err) {
+      const msg = err && err.message ? err.message : "上传失败";
+      return res.status(400).json({ error: msg });
+    }
+    const files = Array.isArray(req.files) ? req.files : [];
+    const urls = files.map((f) => `/uploads/${f.filename}`);
+    res.json({ urls });
+  });
+});
+
 // ==================== 错误处理 ====================
 app.use((err, req, res, next) => {
   console.error(err);
