@@ -872,10 +872,11 @@
     const me = await API.get("/auth/me");
     state.user = me.user;
     renderHeader();
-    await Promise.all([loadFriends(), loadRequests(), loadSongs()]);
+    await Promise.all([loadFriends(), loadRequests(), loadSongs(), loadPending()]);
     renderSongs();
     renderFriends();
     renderSettings();
+    renderInbox();
   }
   async function loadFriends() {
     const r = await API.get("/friends");
@@ -890,6 +891,14 @@
   async function loadSongs() {
     const r = await API.get("/songs");
     state.songs = r.songs || [];
+  }
+  async function loadPending() {
+    try {
+      const r = await API.get("/pending");
+      state.pending = r.items || [];
+    } catch { state.pending = []; }
+    const dot = document.getElementById("inboxDot");
+    if (dot) dot.style.display = state.pending.length ? "" : "none";
   }
   async function refreshAll() {
     try {
