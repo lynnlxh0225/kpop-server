@@ -1160,6 +1160,48 @@
     } catch (e) { toast(e.message, true); }
   }
 
+  // 编辑队伍位置（车主用）
+  function openEditPositionsModal() {
+    const s = findSong(currentSongId); if (!s) return;
+    if (s.my_role !== 'owner') return toast("只有车主能编辑位置", true);
+    const active = (s.team || []).filter(t => t.status === 'active');
+    if (!active.length) return toast("队伍里还没有成员", true);
+    const box = document.getElementById("editPositionsList");
+    box.innerHTML = active.map(t => `
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+        <span class="avatar" style="font-size:20px;">${t.avatar || '👤'}</span>
+        <div style="min-width:80px;font-weight:600;">${escapeHtml(t.name)}${t.user_id === s.owner_id ? ' <span style="color:var(--pink);font-size:11px;">车主</span>' : ''}</div>
+        <input data-uid="${t.user_id}" data-original="${escapeHtml(t.position || '')}"
+               value="${escapeHtml(t.position || '')}" placeholder="例如：Karina (Center)" style="flex:1;" />
+      </div>
+    `).join("");
+    openModal("editPositionsModal");
+  }
+
+  async function saveAllPositions() {
+    const inputs = document.querySelectorAll("#editPositionsList input[data-uid]");
+    const changes = [];
+    inputs.forEach(inp => {
+      const original = inp.dataset.original || "";
+      const next = inp.value.trim();
+      if (next !== original) changes.push({ uid: parseInt(inp.dataset.uid, 10), position: next });
+    });
+    if (!changes.length) {
+      closeModal("editPositionsModal");
+      toast("没有改动");
+      return;
+    }
+    try {
+      await Promise.all(changes.map(c =>
+        API.put(`/songs/${currentSongId}/members/${c.uid}/position`, { position: c.position })
+      ));
+      await loadSongs();
+      renderTeam();
+      closeModal("editPositionsModal");
+      toast(`已更新 ${changes.length} 个位置`);
+    } catch (e) { toast(e.message, true); }
+  }
+
   // ===================== 排练 =====================
   function renderRehearsals() {
     const s = findSong(currentSongId); if (!s) return;
