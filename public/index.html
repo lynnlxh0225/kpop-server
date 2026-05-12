@@ -1706,10 +1706,11 @@
     // 出席：从 DOM 读
     const attBox = document.getElementById(`p_att_${id}`);
     const chips = attBox ? attBox.querySelectorAll('.att-chip[data-uid]') : [];
-    d.attendance = Array.from(chips).map(c => {
-      const name = c.textContent.trim().replace(/[✓✗?].*$/, '').trim();
-      return { user_id: parseInt(c.dataset.uid, 10), name, status: c.dataset.status };
-    });
+    d.attendance = Array.from(chips).map(c => ({
+      user_id: parseInt(c.dataset.uid, 10),
+      name: c.dataset.name || '',
+      status: c.dataset.status || 'maybe',
+    }));
     return d;
   }
 
