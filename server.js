@@ -253,6 +253,34 @@ app.use(cors({ origin: CORS_ORIGIN }));
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: "请求过于频繁" } });
 
+// ==================== 上传 ====================
+// 文件存到 public/uploads/，nginx 已经在 location / 把整个 public/ 当静态根目录，
+// 所以 /uploads/xxx.jpg 会被 nginx 直接命中文件、不走 Node。
+const UPLOAD_DIR = path.resolve(__dirname, "public/uploads");
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// 兜底：本地开发没有 nginx 时让 Node 也能出图
+app.use("/uploads", express.static(UPLOAD_DIR, { maxAge: "7d" }));
+
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic"]);
+const uploader = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+      const ext = (path.extname(file.originalname) || ".jpg").toLowerCase().replace(/[^a-z0-9.]/g, "");
+      const stamp = Date.now().toString(36);
+      const rand = crypto.randomBytes(4).toString("hex");
+      cb(null, `u${req.userId || "x"}-${stamp}-${rand}${ext.length > 1 ? ext : ".jpg"}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024, files: 8 },
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_MIME.has(file.mimetype)) {
+      return cb(new Error("只接受 jpg/png/webp/gif/heic 图片"));
+    }
+    cb(null, true);
+  },
+});
+
 function authRequired(req, res, next) {
   const auth = req.headers.authorization || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
