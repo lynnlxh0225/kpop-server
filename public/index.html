@@ -1454,6 +1454,7 @@
   }
   let editingPerfId = null;
   let perfDraftAttendance = [];
+  let perfDraftImages = [];
   function openPerfModal(id) {
     const s = findSong(currentSongId); if (!s) return;
     if (s.my_role !== 'owner') return toast("仅车主可操作", true);
@@ -1468,6 +1469,8 @@
     document.getElementById("perfLocation").value = p?.location || "";
     document.getElementById("perfOutfit").value = p?.outfit || "";
     document.getElementById("perfNotes").value = p?.notes || "";
+    perfDraftImages = Array.isArray(p?.outfit_images) ? p.outfit_images.slice() : [];
+    renderPerfImagesBox();
     const activeMembers = (s.team || []).filter(t => t.status === 'active');
     if (p && p.attendance && p.attendance.length) {
       perfDraftAttendance = activeMembers.map(t => {
