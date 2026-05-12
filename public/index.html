@@ -1433,15 +1433,56 @@
       const ownerActions = isOwner ? `
         <button class="btn small ghost" onclick="openPerfModal(${p.id})">编辑</button>
         <button class="btn small danger" onclick="deletePerf(${p.id})">删除</button>` : '';
+
+      // 车主整体装搭参考图
+      const ownerImgs = Array.isArray(p.outfit_images) ? p.outfit_images : [];
+      const ownerImgsHtml = ownerImgs.length ? `
+        <div class="outfit-block">
+          <div class="label">👗 车主整体要求${p.outfit ? '：' + escapeHtml(p.outfit) : ''}</div>
+          <div class="img-grid">
+            ${ownerImgs.map(u => `
+              <div class="img-thumb" onclick="openLightbox('${escapeAttr(u)}')">
+                <img src="${escapeAttr(u)}" alt="" />
+              </div>`).join("")}
+          </div>
+        </div>` : (p.outfit ? `<div class="row">👗 装搭：${escapeHtml(p.outfit)}</div>` : '');
+
+      // 我的穿搭（只有当前用户是 active 成员/车主时才能编辑）
+      const memberOutfits = Array.isArray(p.member_outfits) ? p.member_outfits : [];
+      const myOutfit = memberOutfits.find(o => o.user_id === state.user.id);
+      const myOutfitHtml = !isLeft ? renderMyOutfit(p.id, myOutfit) : '';
+
+      // 队员们的穿搭（不含自己）
+      const others = memberOutfits.filter(o => o.user_id !== state.user.id);
+      const othersHtml = others.length ? `
+        <div class="outfit-block">
+          <div class="label">👯 队员们的穿搭</div>
+          <div class="member-outfits-grid">
+            ${others.map(o => `
+              <div class="member-outfit-card">
+                <div class="who">${o.avatar || '👤'} ${escapeHtml(o.name)}</div>
+                ${o.notes ? `<div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">${escapeHtml(o.notes)}</div>` : ''}
+                <div class="img-grid" style="grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));">
+                  ${(o.images || []).map(u => `
+                    <div class="img-thumb" onclick="openLightbox('${escapeAttr(u)}')">
+                      <img src="${escapeAttr(u)}" alt="" />
+                    </div>`).join("")}
+                </div>
+              </div>`).join("")}
+          </div>
+        </div>` : '';
+
       return `
         <div class="item-card">
           <h4>🎤 ${escapeHtml(p.name)} <span class="badge" style="background:${st.bg};color:${st.text};">${st.label}</span></h4>
           <div class="row">📅 ${escapeHtml(p.date || '日期未定')} ${escapeHtml(p.time || '')}</div>
           ${p.city || p.location ? `<div class="row">📍 ${escapeHtml(p.city || '')}${p.city && p.location ? ' · ' : ''}${escapeHtml(p.location || '')}</div>` : ''}
-          ${p.outfit ? `<div class="row">👗 装搭：${escapeHtml(p.outfit)}</div>` : ''}
+          ${ownerImgsHtml}
           ${p.notes ? `<div class="row">📝 ${escapeHtml(p.notes)}</div>` : ''}
           ${attHtml ? `<div style="margin-top:8px;">${attHtml}</div>` : ''}
           ${myAttHtml}
+          ${myOutfitHtml}
+          ${othersHtml}
           ${ownerActions ? `<div class="actions">${ownerActions}</div>` : ''}
         </div>`;
     }).join("") : `<div class="empty"><span class="emoji">🎤</span><div>还没有路演计划</div></div>`;
@@ -1595,6 +1636,79 @@
   }
   function closeLightbox() {
     document.getElementById("lightbox").classList.remove("active");
+  }
+
+  // ===================== 我的穿搭（路演每人一份） =====================
+  // 内存里维护 { [perfId]: { images: [], notes: '', dirty: bool } }
+  const myOutfitDrafts = {};
+
+  function renderMyOutfit(perfId, existing) {
+    const draft = myOutfitDrafts[perfId] || (myOutfitDrafts[perfId] = {
+      images: (existing && existing.images) ? existing.images.slice() : [],
+      notes: existing && existing.notes ? existing.notes : '',
+      dirty: false,
+    });
+    return `
+      <div class="outfit-block" style="border:1px solid var(--pink);background:var(--pink-soft);">
+        <div class="label" style="color:var(--pink);">✨ 我的穿搭（${state.user.avatar || '👤'} ${escapeHtml(state.user.name)}）</div>
+        <textarea id="myOutfitNotes_${perfId}" placeholder="备注：例如黑色短裙 + 黑色高帮鞋" style="min-height:50px;">${escapeHtml(draft.notes)}</textarea>
+        <div class="img-grid" id="myOutfitImgs_${perfId}" style="margin-top:8px;">
+          ${draft.images.map((u, i) => `
+            <div class="img-thumb" onclick="openLightbox('${escapeAttr(u)}')">
+              <img src="${escapeAttr(u)}" alt="" />
+              <span class="x" onclick="event.stopPropagation();removeMyOutfitImage(${perfId}, ${i})">×</span>
+            </div>`).join("")}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+          <label class="upload-btn">
+            <input type="file" accept="image/*" multiple style="display:none;" onchange="onMyOutfitPicked(${perfId}, this)" />
+            <span>📷 加图</span>
+          </label>
+          <button class="btn small" onclick="saveMyOutfit(${perfId})">保存我的穿搭</button>
+        </div>
+      </div>`;
+  }
+
+  function removeMyOutfitImage(perfId, idx) {
+    const d = myOutfitDrafts[perfId]; if (!d) return;
+    d.images.splice(idx, 1);
+    rerenderMyOutfit(perfId);
+  }
+
+  async function onMyOutfitPicked(perfId, input) {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    input.value = "";
+    try {
+      const urls = await uploadFiles(files);
+      const d = myOutfitDrafts[perfId] || (myOutfitDrafts[perfId] = { images: [], notes: '', dirty: false });
+      d.images = d.images.concat(urls).slice(0, 24);
+      rerenderMyOutfit(perfId);
+      toast(`已上传 ${urls.length} 张`);
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // 局部重渲染，避免整个路演 tab 重画导致输入框丢焦
+  function rerenderMyOutfit(perfId) {
+    const imgsEl = document.getElementById(`myOutfitImgs_${perfId}`);
+    const d = myOutfitDrafts[perfId]; if (!imgsEl || !d) return;
+    imgsEl.innerHTML = d.images.map((u, i) => `
+      <div class="img-thumb" onclick="openLightbox('${escapeAttr(u)}')">
+        <img src="${escapeAttr(u)}" alt="" />
+        <span class="x" onclick="event.stopPropagation();removeMyOutfitImage(${perfId}, ${i})">×</span>
+      </div>`).join("");
+  }
+
+  async function saveMyOutfit(perfId) {
+    const d = myOutfitDrafts[perfId] || { images: [], notes: '' };
+    const notes = document.getElementById(`myOutfitNotes_${perfId}`).value.trim();
+    try {
+      await API.put(`/performances/${perfId}/my-outfit`, { notes, images: d.images });
+      delete myOutfitDrafts[perfId]; // 清掉草稿，下次进来用服务器最新数据
+      await loadSongs();
+      renderPerformances();
+      toast("已保存");
+    } catch (e) { toast(e.message, true); }
   }
 
   // ===================== 好友 =====================
