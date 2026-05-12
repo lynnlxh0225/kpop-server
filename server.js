@@ -509,6 +509,20 @@ app.get("/api/songs", authRequired, (req, res) => {
         JOIN users u ON u.id = pa.user_id
         WHERE pa.performance_id=?
       `).all(p.id);
+      // outfit_images 反序列化
+      try { p.outfit_images = JSON.parse(p.outfit_images || "[]"); } catch { p.outfit_images = []; }
+      // 每人穿搭
+      const outfits = db.prepare(`
+        SELECT po.user_id, po.notes, po.images, po.updated_at, u.name, u.avatar
+        FROM performance_outfits po
+        JOIN users u ON u.id = po.user_id
+        WHERE po.performance_id=?
+      `).all(p.id);
+      p.member_outfits = outfits.map((o) => {
+        let imgs = [];
+        try { imgs = JSON.parse(o.images || "[]"); } catch {}
+        return { user_id: o.user_id, name: o.name, avatar: o.avatar, notes: o.notes || "", images: imgs, updated_at: o.updated_at };
+      });
     }
   }
   res.json({ songs });
