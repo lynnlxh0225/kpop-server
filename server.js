@@ -175,6 +175,17 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_items(user_id, status);
 `);
+// 老版本数据库迁移：performances 表加 outfit_images 列
+try {
+  const cols = db.prepare("PRAGMA table_info(performances)").all();
+  if (!cols.some((c) => c.name === "outfit_images")) {
+    db.exec("ALTER TABLE performances ADD COLUMN outfit_images TEXT NOT NULL DEFAULT '[]'");
+    console.log("🔧 已为旧 performances 表补 outfit_images 列");
+  }
+} catch (e) {
+  console.error("迁移失败：", e.message);
+}
+
 console.log("✅ 数据库初始化完毕");
 
 // ==================== 工具函数 ====================
