@@ -720,7 +720,7 @@ app.post("/api/songs/:sid/performances", authRequired, (req, res) => {
   const r = db.prepare(`
     INSERT INTO performances (song_id, name, city, date, time, location, outfit, outfit_images, status, notes, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(s.id, name.trim(), city || "", date, time || "", location || "", outfit || "", imgs, status || "planned", notes || "", now());
+  `).run(s.id, name.trim(), city || "", date, time || "", location || "", outfit || "", imgs, status || "pending_submit", notes || "", now());
   saveAttendance("performance", r.lastInsertRowid, attendance || [], s.id);
   res.json({ id: r.lastInsertRowid });
 });
@@ -1107,7 +1107,7 @@ app.post("/api/pending/:id/confirm", authRequired, (req, res) => {
     const r = db.prepare(`
       INSERT INTO performances (song_id, name, city, date, time, location, outfit, status, notes, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(songId, data.name, data.city || "", data.date, data.time || "", data.location || "", data.outfit || "", "planned", data.notes || "", now());
+    `).run(songId, data.name, data.city || "", data.date, data.time || "", data.location || "", data.outfit || "", "pending_submit", data.notes || "", now());
     newId = r.lastInsertRowid;
     saveAttendance("performance", newId, data.attendance || [], songId);
   }

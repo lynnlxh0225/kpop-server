@@ -747,10 +747,11 @@
         <div>
           <label class="field">状态</label>
           <select id="perfStatus">
-            <option value="planned">计划中</option>
-            <option value="confirmed">已确认</option>
-            <option value="done">已完成</option>
-            <option value="canceled">已取消</option>
+            <option value="pending_submit">待投稿</option>
+            <option value="submitted">已投稿</option>
+            <option value="approved">已通过</option>
+            <option value="done">已演完</option>
+            <option value="no_show">未演出</option>
           </select>
         </div>
       </div>
@@ -1031,7 +1032,7 @@
     const html = state.songs.map(s => {
       const activeTeam = (s.team || []).filter(t => t.status === 'active');
       const rehCount = (s.rehearsals || []).length;
-      const perfCount = (s.performances || []).filter(p => p.status !== 'canceled').length;
+      const perfCount = (s.performances || []).filter(p => p.status !== 'no_show').length;
       let roleBadge = '';
       if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">🚗 我是车主</span>';
       else if (s.my_role === 'member') roleBadge = '<span class="badge role-member">🚪 已加入</span>';
@@ -1412,13 +1413,14 @@
     const list = (s.performances || []).slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
     const c = document.getElementById("sub-performance");
     const statusMap = {
-      planned: { label: '计划中', bg: '#fef9c3', text: '#92670d' },
-      confirmed: { label: '已确认', bg: '#d1fae5', text: '#047857' },
-      done: { label: '已完成', bg: '#ede9fe', text: '#7c3aed' },
-      canceled: { label: '已取消', bg: '#f3f4f6', text: '#6b7280' },
+      pending_submit: { label: '待投稿', bg: '#fef3c7', text: '#92400e' },
+      submitted:      { label: '已投稿', bg: '#dbeafe', text: '#1e40af' },
+      approved:       { label: '已通过', bg: '#d1fae5', text: '#047857' },
+      done:           { label: '已演完', bg: '#ede9fe', text: '#7c3aed' },
+      no_show:        { label: '未演出', bg: '#f3f4f6', text: '#6b7280' },
     };
     const itemsHtml = list.length ? list.map(p => {
-      const st = statusMap[p.status] || statusMap.planned;
+      const st = statusMap[p.status] || statusMap.pending_submit;
       const myAtt = (p.attendance || []).find(a => a.user_id === state.user.id);
       const attHtml = (p.attendance || []).map(a => {
         const color = a.status === 'yes' ? 'success' : a.status === 'no' ? 'danger' : 'warn';
@@ -1510,7 +1512,7 @@
     document.getElementById("perfCity").value = p?.city || "北京";
     document.getElementById("perfDate").value = p?.date || "";
     document.getElementById("perfTime").value = p?.time || "";
-    document.getElementById("perfStatus").value = p?.status || "planned";
+    document.getElementById("perfStatus").value = p?.status || "pending_submit";
     document.getElementById("perfLocation").value = p?.location || "";
     document.getElementById("perfOutfit").value = p?.outfit || "";
     document.getElementById("perfNotes").value = p?.notes || "";
