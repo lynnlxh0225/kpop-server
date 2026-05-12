@@ -700,8 +700,16 @@
         <input id="perfLocation" placeholder="例如：三里屯太古里南区" />
       </div>
       <div>
-        <label class="field">装搭</label>
-        <input id="perfOutfit" placeholder="例如：原版MV同款" />
+        <label class="field">装搭文字描述</label>
+        <input id="perfOutfit" placeholder="例如：原版MV同款黑色练习服" />
+      </div>
+      <div>
+        <label class="field">装搭参考图（车主整体要求）</label>
+        <div id="perfOutfitImagesBox" class="img-grid"></div>
+        <label class="upload-btn">
+          <input type="file" accept="image/*" multiple style="display:none;" onchange="onPerfImagesPicked(this)" />
+          <span>📷 添加图片</span>
+        </label>
       </div>
       <div>
         <label class="field">备注</label>
