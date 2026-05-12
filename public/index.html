@@ -494,6 +494,34 @@
     <div id="friendList"></div>
   </section>
 
+  <!-- 整理消息（待确认队列） -->
+  <section class="page" id="page-inbox">
+    <div class="page-header">
+      <h2>📥 整理消息</h2>
+    </div>
+    <div class="setting-card">
+      <label class="field">把微信群聊天记录粘贴到这里</label>
+      <textarea id="parseText" placeholder="例如：&#10;Lynn：明晚 7 点 X 练习室排 Whiplash 哦~&#10;小米：好的我去&#10;Cici：我请假明天有事去不了&#10;..." style="min-height:140px;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:180px;">
+          <label class="field">关联到哪首歌？（可选）</label>
+          <select id="parseSongId">
+            <option value="">AI 自动判断</option>
+          </select>
+        </div>
+        <button class="btn" id="parseBtn" onclick="submitParse()">✨ 帮我整理</button>
+      </div>
+      <div class="parse-hint">
+        💡 在微信群长按一条消息 → 多选 → 选其他消息 → 「合并转发」→ 「复制」，再回到这里粘贴。AI 会识别排练/路演的日期、地点、服装和大家的出席态度。
+      </div>
+    </div>
+
+    <div style="margin-top:18px;">
+      <h3 style="font-size:15px;margin:0 0 10px;">待确认（<span id="pendingCount">0</span>）</h3>
+      <div id="pendingList"></div>
+    </div>
+  </section>
+
   <!-- 设置页 -->
   <section class="page" id="page-settings">
     <div class="page-header"><h2>设置</h2></div>
