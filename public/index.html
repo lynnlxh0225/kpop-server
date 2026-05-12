@@ -786,6 +786,7 @@
     incomingRequests: [],
     outgoingRequests: [],
     songs: [],
+    pending: [],
   };
   function findSong(id) { return state.songs.find(s => s.id === id); }
   function findFriend(uid) { return state.friends.find(f => f.id === uid); }
