@@ -1547,6 +1547,56 @@
     } catch (e) { toast(e.message, true); }
   }
 
+  // ===================== 图片上传 / 灯箱 =====================
+  // 通用上传函数：传入 FileList，返回服务器上的 URL 数组
+  async function uploadFiles(files) {
+    if (!files || !files.length) return [];
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    const headers = {};
+    if (API.token) headers.Authorization = "Bearer " + API.token;
+    let res;
+    try {
+      res = await fetch("/api/upload", { method: "POST", headers, body: fd });
+    } catch (e) { throw new Error("网络错误：" + e.message); }
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (res.status === 401) { API.token = null; showAuth(); throw new Error(data.error || "登录已过期"); }
+    if (!res.ok) throw new Error(data.error || `上传失败 (${res.status})`);
+    return data.urls || [];
+  }
+
+  function renderPerfImagesBox() {
+    const box = document.getElementById("perfOutfitImagesBox");
+    if (!box) return;
+    box.innerHTML = perfDraftImages.map((u, i) => `
+      <div class="img-thumb" onclick="openLightbox('${escapeAttr(u)}')">
+        <img src="${escapeAttr(u)}" alt="" />
+        <span class="x" onclick="event.stopPropagation();perfDraftImages.splice(${i},1);renderPerfImagesBox();" title="删除">×</span>
+      </div>
+    `).join("");
+  }
+
+  async function onPerfImagesPicked(input) {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    input.value = ""; // 允许重新选同一张
+    try {
+      const urls = await uploadFiles(files);
+      perfDraftImages = perfDraftImages.concat(urls).slice(0, 24);
+      renderPerfImagesBox();
+      toast(`已上传 ${urls.length} 张`);
+    } catch (e) { toast(e.message, true); }
+  }
+
+  function openLightbox(url) {
+    document.getElementById("lightboxImg").src = url;
+    document.getElementById("lightbox").classList.add("active");
+  }
+  function closeLightbox() {
+    document.getElementById("lightbox").classList.remove("active");
+  }
+
   // ===================== 好友 =====================
   function renderFriends() {
     // 好友申请区
