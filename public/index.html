@@ -910,12 +910,19 @@
   function switchTab(tab) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    const map = { songs: "page-songs", friends: "page-friends", settings: "page-settings", detail: "page-song-detail" };
+    const map = {
+      songs: "page-songs",
+      friends: "page-friends",
+      inbox: "page-inbox",
+      settings: "page-settings",
+      detail: "page-song-detail",
+    };
     document.getElementById(map[tab]).classList.add("active");
     if (tab !== "detail") {
       const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
       if (btn) btn.classList.add("active");
     }
+    if (tab === "inbox") renderInbox();
   }
   document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
 
