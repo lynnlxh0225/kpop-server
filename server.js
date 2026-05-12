@@ -130,10 +130,23 @@ db.exec(`
     time TEXT DEFAULT '',
     location TEXT DEFAULT '',
     outfit TEXT DEFAULT '',
+    outfit_images TEXT NOT NULL DEFAULT '[]',
     status TEXT DEFAULT 'planned',
     notes TEXT DEFAULT '',
     created_at INTEGER NOT NULL,
     FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
+  );
+
+  -- 每个成员对每场路演的个人穿搭
+  CREATE TABLE IF NOT EXISTS performance_outfits (
+    performance_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
+    images TEXT NOT NULL DEFAULT '[]',
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (performance_id, user_id),
+    FOREIGN KEY (performance_id) REFERENCES performances(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS performance_attendance (
