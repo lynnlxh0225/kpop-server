@@ -609,6 +609,19 @@
   </div>
 </div>
 
+<!-- 编辑成员位置（车主用） -->
+<div class="modal-bg" id="editPositionsModal">
+  <div class="modal">
+    <h3>编辑队伍位置</h3>
+    <p style="font-size:13px;color:var(--text-soft);">每个成员对应一个位置 / 担当（比如 Karina、Winter、Center 这种）。</p>
+    <div id="editPositionsList"></div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('editPositionsModal')">取消</button>
+      <button class="btn" onclick="saveAllPositions()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 排练 -->
 <div class="modal-bg" id="rehearsalModal">
   <div class="modal">
