@@ -186,6 +186,17 @@ try {
   console.error("迁移失败：", e.message);
 }
 
+// 路演 status 枚举迁移：旧 planned/confirmed/canceled → 新 pending_submit/approved/no_show（done 保留）
+try {
+  const r1 = db.prepare("UPDATE performances SET status='pending_submit' WHERE status='planned'").run();
+  const r2 = db.prepare("UPDATE performances SET status='approved'       WHERE status='confirmed'").run();
+  const r3 = db.prepare("UPDATE performances SET status='no_show'        WHERE status='canceled'").run();
+  const total = r1.changes + r2.changes + r3.changes;
+  if (total) console.log(`🔧 路演状态迁移：planned→pending_submit ${r1.changes} 条 / confirmed→approved ${r2.changes} 条 / canceled→no_show ${r3.changes} 条`);
+} catch (e) {
+  console.error("状态迁移失败：", e.message);
+}
+
 console.log("✅ 数据库初始化完毕");
 
 // ==================== 工具函数 ====================
