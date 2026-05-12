@@ -1673,13 +1673,12 @@
 
   function cyclePendingAtt(itemId, userId, el) {
     const order = ['yes', 'maybe', 'no'];
-    const cur = el.dataset.status;
+    const cur = el.dataset.status || 'maybe';
     const next = order[(order.indexOf(cur) + 1) % order.length];
     el.dataset.status = next;
     el.className = `att-chip status-${next}`;
-    // 重写文字（保留名字，更新状态标记）
-    const name = el.textContent.trim().replace(/[✓✗?].*$/, '').trim();
-    el.innerHTML = `${escapeHtml(name)} ${STATUS_MARK[next]}`;
+    const safeName = el.dataset.name || '';
+    el.innerHTML = `${safeName} ${STATUS_MARK[next]}`;
   }
 
   async function updatePendingSong(id, songId) {
