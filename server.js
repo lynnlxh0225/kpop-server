@@ -748,6 +748,23 @@ app.put("/api/performances/:id/my-attendance", authRequired, (req, res) => {
   res.json({ ok: true });
 });
 
+// 个人穿搭：active 成员 / 车主可读写自己那行
+app.put("/api/performances/:id/my-outfit", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const p = db.prepare("SELECT * FROM performances WHERE id=?").get(id);
+  if (!p) return res.status(404).json({ error: "路演不存在" });
+  const access = songAccess(p.song_id, req.userId);
+  if (!access || access.role === "left") return res.status(403).json({ error: "已退出歌曲，无权操作" });
+  const { notes, images } = req.body || {};
+  const imgs = JSON.stringify(sanitizeImagesArr(images));
+  const text = (notes || "").toString().slice(0, 1000);
+  db.prepare(`INSERT INTO performance_outfits (performance_id, user_id, notes, images, updated_at)
+              VALUES (?, ?, ?, ?, ?)
+              ON CONFLICT(performance_id, user_id) DO UPDATE SET notes=excluded.notes, images=excluded.images, updated_at=excluded.updated_at`)
+    .run(id, req.userId, text, imgs, now());
+  res.json({ ok: true });
+});
+
 // ==================== 工具：批量保存出席 ====================
 function saveAttendance(kind, refId, items, songId) {
   const tbl = kind === "rehearsal" ? "rehearsal_attendance" : "performance_attendance";
