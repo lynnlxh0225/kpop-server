@@ -328,6 +328,61 @@
     font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;
   }
 
+  /* ============ 图片栅格 / 上传 / 灯箱 ============ */
+  .img-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap: 8px; margin-bottom: 8px;
+  }
+  .img-grid:empty { display: none; }
+  .img-thumb {
+    position: relative; padding-top: 100%;
+    background: #f5f3f7; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border); cursor: zoom-in;
+  }
+  .img-thumb img {
+    position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover;
+  }
+  .img-thumb .x {
+    position: absolute; top:4px; right:4px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,0.55); color: #fff; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none;
+  }
+  .img-thumb .x:hover { background: var(--danger); }
+  .upload-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--pink-soft); color: var(--pink);
+    padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1px dashed var(--pink);
+  }
+  .upload-btn:hover { background: #ffe6f0; }
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200; cursor: zoom-out; padding: 20px;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+  .outfit-block {
+    background: #fafaff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; margin-top: 8px;
+  }
+  .outfit-block .label { font-size: 12px; color: var(--text-soft); margin-bottom: 6px; font-weight: 600; }
+  .member-outfits-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px; margin-top: 8px;
+  }
+  .member-outfit-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px;
+  }
+  .member-outfit-card .who {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; margin-bottom: 6px;
+  }
+  .member-outfit-card.is-mine { border-color: var(--pink); background: var(--pink-soft); }
+
   /* ============ 整理消息 / 待确认 ============ */
   .pending-card {
     background: #fff; border: 1px solid var(--border); border-radius: 14px;
