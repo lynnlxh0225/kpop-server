@@ -1626,13 +1626,16 @@
 
     const att = Array.isArray(d.attendance) ? d.attendance : [];
     const attHtml = att.length
-      ? att.map(a => `
+      ? att.map(a => {
+          const safeName = escapeHtml(a.name || ('用户' + a.user_id));
+          return `
         <span class="att-chip status-${a.status}"
-              data-uid="${a.user_id}" data-status="${a.status}"
+              data-uid="${a.user_id}" data-status="${a.status}" data-name="${safeName}"
               onclick="cyclePendingAtt(${item.id}, ${a.user_id}, this)"
-              title="点击切换：来 / 看看 / 不来；右键删除">
-          ${escapeHtml(a.name || ('用户' + a.user_id))} ${STATUS_MARK[a.status] || '?'}
-        </span>`).join('')
+              title="点击切换：来 / 看看 / 不来">
+          ${safeName} ${STATUS_MARK[a.status] || '?'}
+        </span>`;
+        }).join('')
       : '<span style="color:var(--text-soft);font-size:12px;">AI 没识别到出席信息</span>';
 
     const id = item.id;
