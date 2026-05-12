@@ -328,9 +328,56 @@
     font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;
   }
 
+  /* ============ 整理消息 / 待确认 ============ */
+  .pending-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow);
+  }
+  .pending-card.kind-perf { border-left: 4px solid var(--purple); }
+  .pending-card.kind-reh  { border-left: 4px solid var(--pink); }
+  .pending-card .ph {
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom: 10px;
+  }
+  .pending-card .ph .badge {
+    padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  }
+  .pending-card .ph .badge.rehear { background: var(--pink-soft); color: var(--pink); }
+  .pending-card .ph .badge.perf { background: var(--purple-soft); color: var(--purple); }
+  .pending-card .ph select { width: auto; min-width: 160px; flex: 1; }
+  .pending-card .row-2 {
+    display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;
+  }
+  .pending-card .single { margin-bottom: 8px; }
+  .pending-card .ai-note {
+    margin-top: 10px; font-size: 12px; color: var(--text-soft);
+    background: #fffbe6; padding: 8px 10px; border-radius: 8px;
+    border-left: 3px solid var(--yellow);
+  }
+  .pending-card .actions {
+    display:flex; gap:8px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .att-chips { display:flex; flex-wrap: wrap; gap: 6px; }
+  .att-chip {
+    padding: 5px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    user-select: none; border: 1px solid transparent;
+    transition: transform .1s;
+  }
+  .att-chip:hover { transform: translateY(-1px); }
+  .att-chip.status-yes   { background: #d1fae5; color: #047857; border-color: #6ee7b7; }
+  .att-chip.status-no    { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+  .att-chip.status-maybe { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .att-chip .x { margin-left: 4px; opacity: 0.5; }
+  .parse-hint {
+    background: #f0f9ff; color: #075985;
+    padding: 10px 12px; border-radius: 10px; font-size: 12px;
+    border-left: 3px solid #38bdf8; margin-top: 10px;
+  }
+
   @media (max-width: 600px) {
     header.topbar h1 { font-size: 16px; }
     .modal .row-2 { grid-template-columns: 1fr; }
+    .pending-card .row-2 { grid-template-columns: 1fr; }
   }
 </style>
 </head>
