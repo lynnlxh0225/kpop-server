@@ -1,0 +1,55 @@
+name: 自动部署到生产服务器
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # 允许在 GitHub 网页手动触发
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false   # 避免两次 deploy 并发冲突
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 检出代码（仅用于显示 commit 信息）
+        uses: actions/checkout@v4
+
+      - name: 📋 显示本次部署的 commit
+        run: |
+          echo "提交：$(git log -1 --pretty=%H)"
+          echo "信息：$(git log -1 --pretty=%s)"
+          echo "作者：$(git log -1 --pretty=%an)"
+
+      - name: 🚀 SSH 连接服务器并部署
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 60s
+          command_timeout: 3m
+          script_stop: true
+          script: |
+            set -e
+            export PATH=$PATH:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node | head -1)/bin
+            cd ~/kpop-server
+            ./deploy.sh
+
+      - name: ✅ 部署成功通知
+        if: success()
+        run: echo "🎉 已部署到生产环境，刷新浏览器查看效果"
+
+      - name: ⚠️ 部署失败排查提示
+        if: failure()
+        run: |
+          echo "::error::部署失败。常见原因："
+          echo "1) GitHub Secrets 未正确设置（SSH_HOST / SSH_USER / SSH_PRIVATE_KEY）"
+          echo "2) 服务器 ~/.ssh/authorized_keys 没加这个公钥"
+          echo "3) 服务器 ~/kpop-server/deploy.sh 不存在或没执行权限"
+          echo "4) Node/pm2 没在 PATH 里（可能 nvm 路径有问题）"
