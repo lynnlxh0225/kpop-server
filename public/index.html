@@ -1223,13 +1223,35 @@
     } catch (e) { toast(e.message, true); }
   }
   async function removeSongMember(uid) {
-    if (!confirm("将 TA 从这首歌移除？历史出席记录会保留。")) return;
+    if (!confirm("把 TA 从这首歌的队伍里移除？\n\n⚠️ TA 在这首歌「所有排练 + 路演」的出席和个人穿搭也会一并清掉。\n如果只是某次活动不来，请在那次排练/路演的小标签上点 × 单独移除。")) return;
     try {
       await API.del(`/songs/${currentSongId}/members/${uid}`);
       await loadSongs();
       renderTeam();
       renderSongs();
-      toast("已移除");
+      toast("已移除（连带清掉了所有排练/路演出席）");
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // 车主在单次排练里把某人踢出（不影响他在队伍里）
+  async function removeRehAtt(rehId, uid, name) {
+    if (!confirm(`只把「${name}」从这次排练里移除？\n（TA 仍在队伍里，下次排练默认会出现）`)) return;
+    try {
+      await API.del(`/rehearsals/${rehId}/attendance/${uid}`);
+      await loadSongs();
+      renderRehearsals();
+      toast("已从这次排练移除");
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // 车主在单次路演里把某人踢出
+  async function removePerfAtt(perfId, uid, name) {
+    if (!confirm(`只把「${name}」从这次路演里移除？\n（TA 仍在队伍里。TA 在这次路演的个人穿搭也会清掉）`)) return;
+    try {
+      await API.del(`/performances/${perfId}/attendance/${uid}`);
+      await loadSongs();
+      renderPerformances();
+      toast("已从这次路演移除");
     } catch (e) { toast(e.message, true); }
   }
 
