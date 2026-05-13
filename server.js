@@ -180,6 +180,16 @@ db.exec(`
     FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE SET NULL
   );
   CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_items(user_id, status);
+
+  -- 每日 AI 配额计数：防止单用户一夜烧光 API key
+  CREATE TABLE IF NOT EXISTS daily_usage (
+    user_id INTEGER NOT NULL,
+    date TEXT NOT NULL,         -- YYYY-MM-DD
+    kind TEXT NOT NULL,          -- 'parse' | 'parse_images'
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, date, kind),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 // 老版本数据库迁移：songs 表加 position_slots / private 列
 try {
