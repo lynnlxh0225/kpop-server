@@ -1646,12 +1646,18 @@ const uploadLimiter = rateLimit({
 });
 
 app.post("/api/upload", authRequired, uploadLimiter, (req, res) => {
-  uploader.array("files", 8)(req, res, (err) => {
+  uploader.array("files", 12)(req, res, (err) => {
     if (err) {
-      const msg = err && err.message ? err.message : "上传失败";
+      // multer 错误细分
+      let msg = err && err.message ? err.message : "上传失败";
+      if (err.code === "LIMIT_FILE_SIZE") msg = "单张图片不能超过 20MB（建议在客户端压缩后再传）";
+      if (err.code === "LIMIT_FILE_COUNT") msg = "一次最多 12 张";
+      if (err.code === "LIMIT_UNEXPECTED_FILE") msg = "字段名不对，应该是 files";
+      console.error("[upload] 错误:", err.code || "(no code)", err.message);
       return res.status(400).json({ error: msg });
     }
     const files = Array.isArray(req.files) ? req.files : [];
+    if (!files.length) return res.status(400).json({ error: "没收到文件，请检查是否选了图" });
     const urls = files.map((f) => `/uploads/${f.filename}`);
     res.json({ urls });
   });
