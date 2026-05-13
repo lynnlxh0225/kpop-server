@@ -223,12 +223,16 @@ try {
   console.error("迁移失败：", e.message);
 }
 
-// 老 users 表加 calendar_token 列（如果还没有）
+// 老 users 表加 calendar_token / source 列（如果还没有）
 try {
   const uCols = db.prepare("PRAGMA table_info(users)").all();
   if (!uCols.some((c) => c.name === "calendar_token")) {
     db.exec("ALTER TABLE users ADD COLUMN calendar_token TEXT");
     console.log("🔧 已为旧 users 表补 calendar_token 列");
+  }
+  if (!uCols.some((c) => c.name === "source")) {
+    db.exec("ALTER TABLE users ADD COLUMN source TEXT NOT NULL DEFAULT ''");
+    console.log("🔧 已为旧 users 表补 source 列");
   }
 } catch (e) {
   console.error("users 迁移失败：", e.message);
