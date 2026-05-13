@@ -1855,13 +1855,14 @@
     const files = Array.from(input.files || []);
     if (!files.length) return;
     input.value = "";
+    toast(`📤 正在压缩并上传 ${files.length} 张图…`);
     try {
       const urls = await uploadFiles(files);
       const d = myOutfitDrafts[perfId] || (myOutfitDrafts[perfId] = { images: [], notes: '', dirty: false });
       d.images = d.images.concat(urls).slice(0, 24);
       rerenderMyOutfit(perfId);
-      toast(`已上传 ${urls.length} 张`);
-    } catch (e) { toast(e.message, true); }
+      toast(`✅ 已上传 ${urls.length} 张`);
+    } catch (e) { toast("上传失败：" + e.message, true); }
   }
 
   // 局部重渲染，避免整个路演 tab 重画导致输入框丢焦
