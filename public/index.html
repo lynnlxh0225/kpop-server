@@ -1774,31 +1774,80 @@
     const team = s.team || [];
     const active = team.filter(t => t.status === 'active');
     const left = team.filter(t => t.status === 'left');
-    let activeHtml = active.length
-      ? active.map(t => `
+    const slots = Array.isArray(s.position_slots) ? s.position_slots : [];
+
+    // 把每个 slot 匹配一个成员（按 position 字段精确匹配，忽略大小写）
+    const slotMatched = new Set();
+    function findMemberBySlot(slotName) {
+      const k = (slotName || "").toLowerCase().trim();
+      return active.find(m => (m.position || "").toLowerCase().trim() === k);
+    }
+
+    const slotsHtml = slots.length ? `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${slots.map((name) => {
+          const m = findMemberBySlot(name);
+          if (m) slotMatched.add(m.user_id);
+          const meId = state.user.id;
+          const canKick = isOwner && m && m.user_id !== s.owner_id;
+          return `
+            <div class="slot-row">
+              <div class="slot-name">${escapeHtml(name)}</div>
+              ${m ? `
+                <div class="slot-assigned">
+                  <span style="font-size:18px;">${m.avatar || '👤'}</span>
+                  <span>${escapeHtml(m.name)}${m.user_id === meId ? ' <span style="font-size:11px;color:var(--primary);">（我）</span>' : ''}</span>
+                  ${canKick ? `<button class="btn ghost small" onclick="removeSongMember(${m.user_id})" style="margin-left:auto;">移除</button>` : ''}
+                </div>
+              ` : `
+                <div class="slot-empty">未分配</div>
+                ${isOwner ? `<button class="btn small" onclick="openAddMemberModal('${escapeAttr(name)}')">+ 选好友</button>` : ''}
+              `}
+            </div>`;
+        }).join("")}
+      </div>
+    ` : '';
+
+    // 不在任何 slot 上的活跃成员（手动改过 position 或 slot 后调整过）
+    const unmatched = active.filter(m => !slotMatched.has(m.user_id));
+    const unmatchedHtml = unmatched.length ? `
+      <div style="margin-top:14px;">
+        <div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">其他成员</div>
+        ${unmatched.map(t => `
           <span class="chip purple">
             <span class="avatar">${t.avatar || '👤'}</span>${escapeHtml(t.name)}
             <span class="pos">${escapeHtml(t.position || '未定位')}</span>
             ${isOwner && t.user_id !== s.owner_id ? `<span class="leave-x" onclick="event.stopPropagation();removeSongMember(${t.user_id})" title="从歌曲移除">×</span>` : ''}
-          </span>`).join("")
-      : `<div style="color:var(--text-soft);font-size:13px;">还没有添加任何成员</div>`;
-    let leftHtml = left.length
-      ? `<div style="margin-top:14px;"><div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">已退出（历史）</div>${
-          left.map(t => `<span class="chip gray"><span class="avatar">${t.avatar || '👤'}</span>${escapeHtml(t.name)}</span>`).join("")
-        }</div>`
+          </span>`).join("")}
+      </div>` : '';
+
+    const leftHtml = left.length ? `
+      <div style="margin-top:14px;">
+        <div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">已退出（历史）</div>
+        ${left.map(t => `<span class="chip gray"><span class="avatar">${t.avatar || '👤'}</span>${escapeHtml(t.name)}</span>`).join("")}
+      </div>` : '';
+
+    const emptyHint = !slots.length && !active.length
+      ? `<div style="color:var(--text-soft);font-size:13px;">还没有位置和成员。点上面「✏️ 编辑队伍」加位置，或「+ 添加好友」直接加人。</div>`
       : '';
-    let actionHtml = isOwner
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">
-           <button class="btn small ghost" onclick="openEditPositionsModal()">✏️ 编辑位置</button>
-           <button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>
-         </div>`
-      : '';
+
+    const actionHtml = isOwner ? `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn small ghost" onclick="openEditPositionsModal()">✏️ 编辑队伍</button>
+        <button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>
+      </div>` : '';
+
     document.getElementById("sub-team").innerHTML = `
       <div class="page-header">
-        <h2 style="font-size:16px;">队伍（${active.length} 人）</h2>
+        <h2 style="font-size:16px;">队伍（${active.length} / ${slots.length || active.length} 位）</h2>
         ${actionHtml}
       </div>
-      <div class="item-card">${activeHtml}${leftHtml}</div>
+      <div class="item-card">
+        ${slotsHtml}
+        ${unmatchedHtml}
+        ${leftHtml}
+        ${emptyHint}
+      </div>
     `;
   }
 
