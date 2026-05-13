@@ -345,6 +345,80 @@
     font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;
   }
 
+  /* ============ Hero + 轮播 ============ */
+  .hero-card {
+    position: relative; overflow: hidden;
+    margin: 12px 0 14px; padding: 20px 22px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #4f7cf5 0%, #6366f1 50%, #4338ca 100%);
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+  }
+  .hero-deco {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-greeting { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; }
+  .hero-sub { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .hero-stats {
+    display: flex; gap: 14px; margin-top: 18px;
+  }
+  .hero-stat {
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 14px; padding: 10px 14px;
+    min-width: 86px; flex: 1; max-width: 130px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  }
+  .hero-stat b { font-size: 22px; font-weight: 800; }
+  .hero-stat span { font-size: 11px; opacity: 0.9; }
+
+  .quick-banner {
+    margin-bottom: 14px;
+    display: flex; gap: 10px;
+    overflow-x: auto; scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .quick-banner::-webkit-scrollbar { height: 4px; }
+  .quick-banner::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .quick-banner:empty { display: none; }
+  .qb-card {
+    flex: 0 0 78%; max-width: 320px;
+    scroll-snap-align: start;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06);
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .qb-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(59, 130, 246, 0.12); }
+  .qb-card .qb-kind {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 8px;
+    display: inline-block; width: fit-content;
+  }
+  .qb-card .qb-kind.reh { background: var(--blue-soft); color: var(--blue-deep); }
+  .qb-card .qb-kind.perf { background: var(--indigo-soft); color: #4338ca; }
+  .qb-card .qb-title { font-size: 14px; font-weight: 700; margin-top: 4px; color: var(--text); }
+  .qb-card .qb-meta { font-size: 12px; color: var(--text-soft); }
+  .qb-card .qb-when { font-size: 13px; font-weight: 600; color: var(--blue); }
+  .qb-card .qb-when.urgent { color: #ef4444; }
+  .qb-empty {
+    background: var(--blue-soft); border-radius: 14px; padding: 14px 16px;
+    font-size: 13px; color: var(--blue-deep); width: 100%;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .hero-greeting { font-size: 18px; }
+    .hero-stats { gap: 8px; }
+    .hero-stat { min-width: 0; padding: 8px 10px; }
+    .hero-stat b { font-size: 18px; }
+    .qb-card { flex: 0 0 88%; }
+  }
+
   /* ============ 教程折叠块 ============ */
   details.howto-block {
     background: var(--blue-soft); border: 1px solid var(--blue-soft);
