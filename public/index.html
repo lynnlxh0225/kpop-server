@@ -1853,10 +1853,10 @@
 
   // 添加成员到歌曲
   let addMemberSelected = null;
-  function openAddMemberModal() {
+  function openAddMemberModal(prefillPosition) {
     const s = findSong(currentSongId); if (!s) return;
     addMemberSelected = null;
-    document.getElementById("newMemberPosition").value = "";
+    document.getElementById("newMemberPosition").value = prefillPosition || "";
     const existingIds = new Set((s.team || []).filter(t => t.status === 'active').map(t => t.user_id));
     const picker = document.getElementById("addMemberPicker");
     const candidates = state.friends.filter(f => !existingIds.has(f.id));
