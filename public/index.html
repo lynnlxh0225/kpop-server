@@ -1112,6 +1112,10 @@
   function showApp() {
     document.getElementById("auth-screen").style.display = "none";
     document.getElementById("main-app").style.display = "block";
+    // 初始化历史栈：把当前页面状态写一份，这样后续 push 才能有"返回"目标
+    if (!history.state || !history.state.tab) {
+      history.replaceState({ tab: "songs" }, "");
+    }
   }
   function showRegister() {
     document.getElementById("login-card").style.display = "none";
