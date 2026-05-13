@@ -578,6 +578,41 @@ app.post("/api/auth/regenerate-invite", authRequired, (req, res) => {
   res.json({ invite_code: code });
 });
 
+// 拿当前用户的日历订阅 token + URL（没有就生成）
+app.get("/api/auth/calendar-url", authRequired, (req, res) => {
+  const token = getOrCreateCalToken(req.userId);
+  // 同时返回 webcal:// 和 https:// 两种，前端可自己挑
+  // 协议留空让前端拼，后端只给 token 和 path
+  res.json({ token, path: `/api/cal/${token}.ics` });
+});
+
+// 重置日历 token（旧链接立即失效）
+app.post("/api/auth/regenerate-calendar-token", authRequired, (req, res) => {
+  const token = genCalendarToken();
+  db.prepare("UPDATE users SET calendar_token=? WHERE id=?").run(token, req.userId);
+  res.json({ token, path: `/api/cal/${token}.ics` });
+});
+
+// 公开的 ics 拉取（靠 token 认证，无需登录）
+// 限流：每个 token 每分钟最多 30 次（iOS 默认每小时拉 1 次，足够宽松）
+const calLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => `cal-${req.params.token || req.ip}`,
+  message: "rate limited",
+});
+app.get("/api/cal/:token.ics", calLimiter, (req, res) => {
+  const token = req.params.token;
+  if (!token || token.length < 20) return res.status(400).type("text").send("invalid token");
+  const u = db.prepare("SELECT id FROM users WHERE calendar_token=?").get(token);
+  if (!u) return res.status(404).type("text").send("calendar not found");
+  const ics = buildIcsFor(u.id);
+  if (!ics) return res.status(500).type("text").send("calendar build failed");
+  res.set("Content-Type", "text/calendar; charset=utf-8");
+  res.set("Cache-Control", "no-cache");
+  res.send(ics);
+});
+
 // ==================== 好友 ====================
 app.get("/api/friends", authRequired, (req, res) => {
   const friends = db.prepare(`
