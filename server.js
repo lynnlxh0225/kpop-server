@@ -814,12 +814,16 @@ app.patch("/api/songs/:id", authRequired, (req, res) => {
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
   if (!s) return res.status(404).json({ error: "歌曲不存在" });
   if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可修改" });
-  const { title, artist, type, notes } = req.body || {};
-  db.prepare("UPDATE songs SET title=?, artist=?, type=?, notes=? WHERE id=?").run(
+  const { title, artist, type, notes, position_slots } = req.body || {};
+  const slotsJson = position_slots !== undefined
+    ? JSON.stringify(sanitizePositionSlots(position_slots))
+    : s.position_slots;
+  db.prepare("UPDATE songs SET title=?, artist=?, type=?, notes=?, position_slots=? WHERE id=?").run(
     title !== undefined ? title : s.title,
     artist !== undefined ? artist : s.artist,
     type !== undefined ? type : s.type,
     notes !== undefined ? notes : s.notes,
+    slotsJson,
     songId
   );
   res.json({ ok: true });
