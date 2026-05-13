@@ -1821,6 +1821,35 @@
   function showAuth() {
     document.getElementById("auth-screen").style.display = "flex";
     document.getElementById("main-app").style.display = "none";
+    loadRegistrationStatus();
+  }
+
+  // 拉取剩余名额状态，渲染 banner，并按需禁用注册按钮
+  async function loadRegistrationStatus() {
+    const banner = document.getElementById("seats-banner");
+    const btn = document.getElementById("reg-btn");
+    if (!banner) return;
+    try {
+      const r = await API.get("/auth/registration-status");
+      const pct = Math.min(100, Math.round((r.current / r.max) * 100));
+      if (r.open) {
+        banner.className = "seats-banner";
+        banner.innerHTML = `
+          <span>✨ 种子用户 <b>${r.current} / ${r.max}</b></span>
+          <div class="seats-bar"><i style="width:${pct}%;"></i></div>
+          <span style="color:var(--primary);font-weight:700;">还剩 ${r.remaining}</span>
+        `;
+        if (btn) { btn.disabled = false; btn.textContent = "注 册"; }
+      } else {
+        banner.className = "seats-banner full";
+        banner.innerHTML = `🌱 <span><b>首批 ${r.max} 个名额已满</b>。加微信 lynnlxh0225 留邮箱排队，下一批开放时通知你。</span>`;
+        if (btn) { btn.disabled = true; btn.textContent = "名额已满"; }
+      }
+      banner.style.display = "";
+    } catch (e) {
+      // 拉不到就静默不显示 banner
+      banner.style.display = "none";
+    }
   }
   function showApp() {
     document.getElementById("auth-screen").style.display = "none";
