@@ -562,12 +562,33 @@ function authRequired(req, res, next) {
 app.get("/api/health", (req, res) => res.json({ status: "ok", time: new Date().toISOString() }));
 
 // ==================== 认证 ====================
+// 注册名额查询（公开接口，不要登录）
+app.get("/api/auth/registration-status", (req, res) => {
+  const cur = db.prepare("SELECT COUNT(*) AS c FROM users").get().c;
+  res.json({
+    current: cur,
+    max: MAX_USERS,
+    remaining: Math.max(0, MAX_USERS - cur),
+    open: cur < MAX_USERS,
+  });
+});
+
+const VALID_SOURCES = new Set(["pyq", "xhs", "wx", "friend", "other"]);
 app.post("/api/auth/register", authLimiter, (req, res) => {
-  const { email, password, name, avatar, inviteCode, agreed } = req.body || {};
+  const { email, password, name, avatar, inviteCode, agreed, source } = req.body || {};
   if (!agreed) return res.status(400).json({ error: "需要同意《用户协议》和《隐私政策》才能注册" });
   if (!isEmail(email)) return res.status(400).json({ error: "邮箱格式不正确" });
   if (!password || password.length < 6) return res.status(400).json({ error: "密码至少 6 位" });
   if (!name || !name.trim()) return res.status(400).json({ error: "请填写昵称" });
+
+  // 50 人名额闸门
+  const curCount = db.prepare("SELECT COUNT(*) AS c FROM users").get().c;
+  if (curCount >= MAX_USERS) {
+    return res.status(403).json({
+      error: `首批 ${MAX_USERS} 个种子名额已满，加微信 lynnlxh0225 排队等下一批 🌱`,
+      reason: "max_users_reached",
+    });
+  }
 
   // 邀请码校验（可选）
   let inviter = null;
