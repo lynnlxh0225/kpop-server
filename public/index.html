@@ -1864,13 +1864,11 @@
     document.body.removeChild(a);
   }
 
-  // 构建分享卡片 DOM（用 inline style 直接写，避免 html2canvas 解不到 CSS 变量）
+  // 构建分享卡片 DOM（白底，主题色点缀，信息凸显）
   function buildShareCardDOM(s) {
-    // 从当前主题取颜色
     const cs = getComputedStyle(document.documentElement);
-    const heroFrom = cs.getPropertyValue("--hero-from").trim() || "#1a1a2e";
-    const heroVia  = cs.getPropertyValue("--hero-via").trim()  || "#4c1d95";
-    const heroTo   = cs.getPropertyValue("--hero-to").trim()   || "#06b6d4";
+    const primary = cs.getPropertyValue("--primary").trim() || "#7c3aed";
+    const accent = cs.getPropertyValue("--accent").trim() || "#06b6d4";
 
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
@@ -1888,101 +1886,144 @@
       .slice().sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')))
       .slice(0, 3);
 
+    // 调色（白底卡片）
+    const C = {
+      bg: '#ffffff',
+      text: '#0f172a',          // 主标题深黑
+      textSecondary: '#475569', // 副标题深灰
+      textTertiary: '#94a3b8',  // 辅助灰
+      blockBorder: '#e5e7eb',   // 信息块边框
+      divider: '#f1f5f9',       // 分割线
+      primaryTint: hexToRgba(primary, 0.10), // 主题色淡色块
+    };
+
     const wrap = document.createElement("div");
     wrap.style.cssText = `
       width: 600px;
       box-sizing: border-box;
-      padding: 36px 32px 28px;
-      background: linear-gradient(135deg, ${heroFrom} 0%, ${heroVia} 50%, ${heroTo} 100%);
-      color: #fff;
+      padding: 36px 36px 28px;
+      background: ${C.bg};
+      color: ${C.text};
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-      line-height: 1.5;
+      line-height: 1.55;
+      border-top: 6px solid ${primary};
     `;
 
     // 头部：歌名 + 组合
+    const tagLine = `${s.type === 'new' ? '🆕 NEW' : '💎 CLASSIC'}${s.private ? ' · 🔒 PRIVATE' : ''} · K-POP DANCE COVER`;
     const head = document.createElement("div");
     head.innerHTML = `
-      <div style="font-size:13px;opacity:0.75;letter-spacing:1px;">${s.type === 'new' ? '🆕 NEW' : '💎 CLASSIC'} · ${s.private ? '🔒 PRIVATE · ' : ''}K-POP DANCE COVER</div>
-      <div style="font-size:38px;font-weight:800;margin-top:6px;letter-spacing:-0.5px;">🎤 ${escapeHtml(s.title)}</div>
-      <div style="font-size:18px;opacity:0.92;margin-top:4px;">${escapeHtml(s.artist || '未知组合')}</div>
+      <div style="font-size:12px;color:${primary};font-weight:800;letter-spacing:2px;">${tagLine}</div>
+      <div style="font-size:42px;font-weight:800;margin-top:8px;color:${C.text};letter-spacing:-0.5px;line-height:1.15;">${escapeHtml(s.title)}</div>
+      <div style="font-size:18px;color:${C.textSecondary};margin-top:6px;">${escapeHtml(s.artist || '未知组合')}</div>
     `;
     wrap.appendChild(head);
 
-    // 车主
+    // 车主行（chip 风格）
     const ownerBox = document.createElement("div");
-    ownerBox.style.cssText = "margin-top:18px;font-size:14px;";
-    ownerBox.innerHTML = `🚗 车主：<b>${escapeHtml(s.owner ? s.owner.name : '?')}</b>${!s.claimed ? ' <span style="opacity:0.7;">（待认领）</span>' : ''}`;
+    ownerBox.style.cssText = "margin-top:18px;display:flex;align-items:center;gap:8px;font-size:13px;color:" + C.textSecondary + ";";
+    ownerBox.innerHTML = `
+      <span>🚗 车主</span>
+      <span style="background:${C.primaryTint};color:${primary};padding:4px 12px;border-radius:999px;font-size:13px;font-weight:700;">${escapeHtml(s.owner ? s.owner.name : '?')}</span>
+      ${!s.claimed ? '<span style="color:#92400e;background:#fef3c7;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;">待认领</span>' : ''}
+    `;
     wrap.appendChild(ownerBox);
 
-    // 队伍位置
+    // 块辅助函数
+    function makeBlock(titleText) {
+      const box = document.createElement("div");
+      box.style.cssText = `margin-top:14px;border:1px solid ${C.blockBorder};border-radius:14px;padding:14px 16px;background:${C.bg};`;
+      box.innerHTML = `<div style="font-size:12px;color:${primary};font-weight:700;letter-spacing:1px;margin-bottom:10px;">${titleText}</div>`;
+      return box;
+    }
+
+    // 队伍
     if (slots.length || active.length) {
-      const teamBox = document.createElement("div");
-      teamBox.style.cssText = "margin-top:18px;background:rgba(255,255,255,0.10);border-radius:14px;padding:14px 16px;";
-      let teamInner = `<div style="font-size:13px;opacity:0.8;margin-bottom:8px;">👥 队伍${slots.length ? ` · ${active.length} / ${slots.length} 位` : ''}</div>`;
+      const teamBox = makeBlock(`👥 队伍${slots.length ? ` · ${active.length} / ${slots.length} 位` : ''}`);
       const seen = new Set();
+      let lines = "";
       if (slots.length) {
-        teamInner += slots.map(name => {
+        lines += slots.map(name => {
           const m = findM(name);
           if (m) seen.add(m.user_id);
           return `
-            <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0;">
-              <span><b>${escapeHtml(name)}</b></span>
-              <span style="opacity:${m ? 1 : 0.5};">${m ? (m.avatar || '👤') + ' ' + escapeHtml(m.name) : '— 未分配'}</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:6px 0;border-bottom:1px solid ${C.divider};">
+              <b style="color:${C.text};">${escapeHtml(name)}</b>
+              <span style="color:${m ? C.text : C.textTertiary};">${m ? (m.avatar || '👤') + ' ' + escapeHtml(m.name) : '— 未分配'}</span>
             </div>`;
         }).join("");
       }
       const extra = active.filter(m => !seen.has(m.user_id));
       if (extra.length) {
-        teamInner += extra.map(m => `
-          <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0;">
-            <span style="opacity:0.7;">其他</span>
-            <span>${m.avatar || '👤'} ${escapeHtml(m.name)}${m.position ? ' · ' + escapeHtml(m.position) : ''}</span>
+        lines += extra.map(m => `
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:6px 0;border-bottom:1px solid ${C.divider};">
+            <b style="color:${C.textSecondary};">其他</b>
+            <span style="color:${C.text};">${m.avatar || '👤'} ${escapeHtml(m.name)}${m.position ? ' · ' + escapeHtml(m.position) : ''}</span>
           </div>`).join("");
       }
-      teamBox.innerHTML = teamInner;
+      // 去掉最后一条的下边框
+      teamBox.innerHTML += `<div style="margin:-6px 0 0;">${lines}</div>`;
+      teamBox.lastElementChild.lastElementChild && (teamBox.lastElementChild.lastElementChild.style.borderBottom = 'none');
       wrap.appendChild(teamBox);
     }
 
     // 近期排练
     if (upcomingReh.length) {
-      const rehBox = document.createElement("div");
-      rehBox.style.cssText = "margin-top:14px;background:rgba(255,255,255,0.10);border-radius:14px;padding:14px 16px;";
-      rehBox.innerHTML = `
-        <div style="font-size:13px;opacity:0.8;margin-bottom:8px;">📅 近期排练</div>
-        ${upcomingReh.map(r => `
-          <div style="font-size:14px;padding:4px 0;">
-            <b>${escapeHtml(r.date)}</b>${r.time ? ' · ' + escapeHtml(r.time) : ''}${r.location ? '  📍 ' + escapeHtml(r.location) : ''}${r.outfit ? '  👗 ' + escapeHtml(r.outfit) : ''}
-          </div>`).join("")}
-      `;
+      const rehBox = makeBlock("📅 近期排练");
+      rehBox.innerHTML += upcomingReh.map((r, i) => `
+        <div style="font-size:14px;padding:8px 0;${i < upcomingReh.length - 1 ? `border-bottom:1px solid ${C.divider};` : ''}">
+          <div style="font-weight:700;color:${C.text};">${escapeHtml(r.date)}${r.time ? '  ·  ' + escapeHtml(r.time) : ''}</div>
+          ${r.location ? `<div style="color:${C.textSecondary};margin-top:2px;">📍 ${escapeHtml(r.location)}</div>` : ''}
+          ${r.outfit ? `<div style="color:${C.textSecondary};margin-top:2px;">👗 ${escapeHtml(r.outfit)}</div>` : ''}
+        </div>`).join("");
       wrap.appendChild(rehBox);
     }
 
     // 近期路演
     if (upcomingPerf.length) {
-      const perfBox = document.createElement("div");
-      perfBox.style.cssText = "margin-top:14px;background:rgba(255,255,255,0.10);border-radius:14px;padding:14px 16px;";
       const statusLabel = {
         pending_submit: "待投稿", submitted: "已投稿",
         approved: "已通过", done: "已演完",
       };
-      perfBox.innerHTML = `
-        <div style="font-size:13px;opacity:0.8;margin-bottom:8px;">🎤 近期路演</div>
-        ${upcomingPerf.map(p => `
-          <div style="font-size:14px;padding:4px 0;">
-            <b>${escapeHtml(p.name)}</b>${p.city ? '  📍 ' + escapeHtml(p.city) : ''}<br>
-            <span style="opacity:0.85;">${escapeHtml(p.date)}${p.time ? ' · ' + escapeHtml(p.time) : ''} · ${statusLabel[p.status] || p.status}</span>
-          </div>`).join("")}
-      `;
+      const statusColor = {
+        pending_submit: "#92400e", submitted: "#1e40af",
+        approved: "#047857", done: "#7c3aed",
+      };
+      const statusBg = {
+        pending_submit: "#fef3c7", submitted: "#dbeafe",
+        approved: "#d1fae5", done: "#ede9fe",
+      };
+      const perfBox = makeBlock("🎤 近期路演");
+      perfBox.innerHTML += upcomingPerf.map((p, i) => `
+        <div style="font-size:14px;padding:8px 0;${i < upcomingPerf.length - 1 ? `border-bottom:1px solid ${C.divider};` : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <b style="color:${C.text};">${escapeHtml(p.name)}</b>
+            <span style="background:${statusBg[p.status]||'#f3f4f6'};color:${statusColor[p.status]||'#6b7280'};padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;">${statusLabel[p.status] || p.status}</span>
+          </div>
+          <div style="color:${C.textSecondary};margin-top:4px;">📅 ${escapeHtml(p.date)}${p.time ? '  ·  ' + escapeHtml(p.time) : ''}</div>
+          ${(p.city || p.location) ? `<div style="color:${C.textSecondary};margin-top:2px;">📍 ${escapeHtml([p.city, p.location].filter(Boolean).join(' · '))}</div>` : ''}
+          ${p.outfit ? `<div style="color:${C.textSecondary};margin-top:2px;">👗 ${escapeHtml(p.outfit)}</div>` : ''}
+        </div>`).join("");
       wrap.appendChild(perfBox);
     }
 
     // 底部水印
     const footer = document.createElement("div");
-    footer.style.cssText = "margin-top:22px;font-size:11px;opacity:0.6;text-align:center;letter-spacing:0.5px;";
+    footer.style.cssText = `margin-top:20px;padding-top:14px;border-top:1px solid ${C.divider};font-size:11px;color:${C.textTertiary};text-align:center;letter-spacing:1px;`;
     footer.textContent = `K-POP DANCE MANAGER · ${todayStr}`;
     wrap.appendChild(footer);
 
     return wrap;
+  }
+
+  // hex (#rrggbb) → rgba(r,g,b,a)
+  function hexToRgba(hex, alpha) {
+    const h = (hex || "").replace("#", "").trim();
+    if (h.length !== 6) return `rgba(124, 58, 237, ${alpha})`;
+    const r = parseInt(h.slice(0,2), 16);
+    const g = parseInt(h.slice(2,4), 16);
+    const b = parseInt(h.slice(4,6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   async function deleteCurrentSong() {
