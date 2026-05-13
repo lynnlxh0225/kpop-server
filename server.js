@@ -1490,7 +1490,13 @@ app.post("/api/parse-images", authRequired, parseImgLimiter, async (req, res) =>
 
   let raw;
   try {
-    raw = await callAI(messages, { model: AI_VISION_MODEL, jsonMode: false, maxTokens: 4000 });
+    raw = await callAI(messages, {
+      model: AI_VISION_MODEL,
+      jsonMode: false,
+      maxTokens: 4000,
+      temperature: 0.3,
+      mergeSystemIntoUser: true,  // 智谱 GLM-4V 不支持 system 角色
+    });
   } catch (e) {
     console.error("[parse-images] AI 调用失败:", e.message);
     return res.status(e.statusCode || 502).json({ error: e.message || "AI 调用失败" });
