@@ -110,6 +110,17 @@
     transition: border-color .15s, box-shadow .15s;
     -webkit-appearance: none; appearance: none; /* 去 iOS 默认样式 */
   }
+  /* checkbox / radio 单独 reset：上面规则会把它们隐藏 */
+  input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: auto;
+    appearance: auto;
+    width: auto !important;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    accent-color: var(--primary);  /* 勾选时跟主题色 */
+  }
   input:focus, textarea:focus, select:focus {
     border-color: var(--pink);
     box-shadow: 0 0 0 3px rgba(255,95,162,.15);
