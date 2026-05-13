@@ -2259,15 +2259,39 @@
     const s = findSong(currentSongId); if (!s) return;
     addMemberSelected = null;
     document.getElementById("newMemberPosition").value = prefillPosition || "";
-    const existingIds = new Set((s.team || []).filter(t => t.status === 'active').map(t => t.user_id));
+
+    const activeTeam = (s.team || []).filter(t => t.status === 'active');
+    const existingIds = new Set(activeTeam.map(t => t.user_id));
+    const me = activeTeam.find(t => t.user_id === state.user.id);
+    const targetPos = (prefillPosition || "").trim().toLowerCase();
+
     const picker = document.getElementById("addMemberPicker");
-    const candidates = state.friends.filter(f => !existingIds.has(f.id));
+    const candidates = [];
+
+    // 「我」：如果我已经是 active 成员，且当前 position 不是要分配的这个 slot，加进候选
+    if (me && (me.position || "").trim().toLowerCase() !== targetPos) {
+      candidates.push({
+        id: state.user.id,
+        name: state.user.name + " (我)",
+        avatar: state.user.avatar,
+        _isMe: true,
+        _currentPos: me.position || "",
+      });
+    }
+    // 好友：还没在队伍里的
+    state.friends.forEach(f => {
+      if (!existingIds.has(f.id)) {
+        candidates.push({ id: f.id, name: f.name, avatar: f.avatar });
+      }
+    });
+
     if (!candidates.length) {
-      picker.innerHTML = `<div style="font-size:13px;color:var(--text-soft);">没有可添加的好友（要么已经在队伍里，要么还没加好友）</div>`;
+      picker.innerHTML = `<div style="font-size:13px;color:var(--text-soft);">没有可添加的人（你已分到这个位置 + 没好友可加 / 或都已在队伍）</div>`;
     } else {
-      picker.innerHTML = candidates.map(f =>
-        `<span class="picker-chip" onclick="selectAddMember(${f.id}, this)">${f.avatar || '👤'} ${escapeHtml(f.name)}</span>`
-      ).join("");
+      picker.innerHTML = candidates.map(f => {
+        const hint = f._isMe && f._currentPos ? `<span style="font-size:10px;opacity:0.7;margin-left:4px;">（当前：${escapeHtml(f._currentPos)}）</span>` : '';
+        return `<span class="picker-chip" onclick="selectAddMember(${f.id}, this)">${f.avatar || '👤'} ${escapeHtml(f.name)}${hint}</span>`;
+      }).join("");
     }
     openModal("addMemberModal");
   }
