@@ -1106,6 +1106,22 @@
   </div>
 </div>
 
+<!-- 分享图：截图预览 -->
+<div class="modal-bg" id="shareImageModal">
+  <div class="modal" style="max-width: 560px;">
+    <h3>📸 歌曲分享图</h3>
+    <p style="font-size:12px;color:var(--text-soft);margin:0 0 10px;">手机：长按图片选「保存图片」直接进相册。电脑：点下方下载按钮。</p>
+    <div id="shareImagePreview" style="text-align:center;max-height:62vh;overflow:auto;background:var(--bg);padding:12px;border-radius:12px;"></div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('shareImageModal')">关闭</button>
+      <button class="btn" onclick="downloadShareImage()">⬇ 下载</button>
+    </div>
+  </div>
+</div>
+
+<!-- 屏外渲染容器：用来给 html2canvas 截图，position fixed 在屏幕外 -->
+<div id="shareCardOffscreen" style="position:fixed;left:-10000px;top:0;pointer-events:none;z-index:-1;"></div>
+
 <!-- 转让车主 -->
 <div class="modal-bg" id="transferOwnerModal">
   <div class="modal">
