@@ -1944,112 +1944,192 @@
     loadRegistrationStatus();
   }
 
-  // ===================== 新手引导 =====================
-  const ONBOARD_VERSION = "v1";
-  const ONBOARD_STEPS = [
+  // ===================== Spotlight 新手引导 =====================
+  const TOUR_VERSION = "v2";
+  const TOUR_STEPS = [
     {
+      selector: "header.topbar",
       emoji: "👋",
-      title: "嗨，欢迎来到随舞圈",
-      desc: "这是一个 K-pop 翻跳的<b>协作管理工具</b>：管歌曲、约排练、报路演、AI 整理消息、一键发分享图。",
-      tag: "30 秒了解 6 个核心功能",
+      title: "欢迎来到随舞圈",
+      desc: "30 秒带你逛一圈，每步都点亮一个功能区。跟着「下一步」走，随时可跳过。",
+      setup: () => switchTab("songs"),
+      placement: "bottom",
     },
     {
-      emoji: "👯",
-      title: "先加好友",
-      desc: "翻跳是协作。去顶部 <b>「👯 好友」</b> tab，把朋友的邀请码加进来（或者发你的邀请码 / 邀请链接给 ta）。所有功能都基于好友关系。",
-      tag: "你的邀请码在「设置」",
+      selector: ".my-code",
+      emoji: "📣",
+      title: "你的邀请码",
+      desc: "把邀请码或链接发给朋友，朋友注册后<b>自动成为你的好友</b>。协作的起点。",
+      placement: "bottom",
     },
     {
+      selector: '.tab-btn[data-tab="songs"]',
       emoji: "🎵",
-      title: "建第一首歌，AI 自动认成员",
-      desc: "「🎵 歌曲 → + 新建歌曲」。输入歌名和 <b>aespa / TWICE / BLACKPINK</b> 等组合名，AI 会自动识别 4-9 人位置，你只需把好友拉到对应位置。",
-      tag: "已支持 20+ 主流女团",
+      title: "歌曲：你跳的所有歌",
+      desc: "「+ 新建歌曲」输入 <b>aespa</b>、<b>TWICE</b> 等组合名 → AI 自动识别成员位置 → 把好友拉到位即可。",
+      setup: () => switchTab("songs"),
+      placement: "bottom",
     },
     {
-      emoji: "📅",
-      title: "排练 / 路演",
-      desc: "歌曲详情里能记 <b>排练日期地点、路演投稿状态、装搭参考图</b>，每个队员都能改自己的出席状态。再也不用一个个 @ 问。",
-      tag: "车主可转让 · 也能临时认领",
+      selector: '.tab-btn[data-tab="friends"]',
+      emoji: "👯",
+      title: "好友：协作的核心",
+      desc: "翻跳是协作。点这里管理好友，也能看 <b>「ta 跳的舞」</b>，了解朋友最近在跳什么。",
+      setup: () => switchTab("friends"),
+      placement: "bottom",
     },
     {
+      selector: '.tab-btn[data-tab="inbox"]',
       emoji: "📥",
-      title: "AI 整理群消息",
-      desc: "群里讨论了排练时间？打开 <b>「📥 整理消息」</b>，<b>截图上传</b>（推荐）或粘文字，AI 自动识别日期 / 地点 / 谁来。最后你审核入库。",
-      tag: "比手动录入快 10×",
+      title: "AI 整理消息（亮点）",
+      desc: "微信群讨论太杂？<b>截图上传</b>或粘文字，AI 自动识别「明晚 7 点 X 练习室排 Whiplash 小米来 Cici 不来」入库。",
+      setup: () => switchTab("inbox"),
+      placement: "bottom",
     },
     {
-      emoji: "📆",
-      title: "塞进手机日历",
-      desc: "「⚙️ 设置 → 日历订阅」复制链接到 <b>iPhone 日历</b>，所有排练 / 路演自动同步，前一天 push 提醒。再忙也不会忘场。",
-      tag: "iOS / Android / Mac 全通",
+      selector: '.tab-btn[data-tab="settings"]',
+      emoji: "⚙️",
+      title: "设置：换皮肤 + 加日历",
+      desc: "<b>日历订阅</b>（手机日历自动提醒）、<b>皮肤切换</b>（aespa / BP / TWICE 三套主题）。",
+      setup: () => switchTab("settings"),
+      placement: "bottom",
+    },
+    {
+      selector: "header.topbar",
+      emoji: "✨",
+      title: "就这些，开始吧",
+      desc: "先去「歌曲」建第一首，再去「好友」拉人。卡住了在「设置 → 📖 重看引导」回来。",
+      setup: () => switchTab("songs"),
+      placement: "bottom",
+      final: true,
     },
   ];
 
-  let _onboardStep = 0;
+  let _tourIdx = 0;
+  let _tourResizeHandler = null;
 
+  // 兼容旧的入口名（保留 maybeShowOnboarding / resetAndShowOnboarding）
   function maybeShowOnboarding() {
     try {
-      const seen = localStorage.getItem("kpop_onboard");
-      if (seen === ONBOARD_VERSION) return;
+      const seen = localStorage.getItem("kpop_tour");
+      if (seen === TOUR_VERSION) return;
     } catch {}
-    showOnboarding(0);
+    startTour();
+  }
+  function resetAndShowOnboarding() {
+    try { localStorage.removeItem("kpop_tour"); } catch {}
+    startTour();
   }
 
-  function showOnboarding(stepIdx) {
-    _onboardStep = stepIdx || 0;
-    const modal = document.getElementById("onboardModal");
-    if (!modal) return;
-    modal.style.display = "flex";
-    renderOnboardingStep();
+  function startTour() {
+    _tourIdx = 0;
+    const overlay = document.getElementById("tourOverlay");
+    if (!overlay) return;
+    overlay.style.display = "block";
+    // resize / 滚动时重新定位
+    _tourResizeHandler = () => positionCurrentTourStep();
+    window.addEventListener("resize", _tourResizeHandler);
+    window.addEventListener("scroll", _tourResizeHandler, { passive: true });
+    goToTourStep(0);
   }
 
-  function renderOnboardingStep() {
-    const step = ONBOARD_STEPS[_onboardStep];
-    const total = ONBOARD_STEPS.length;
-    const body = document.getElementById("onboardBody");
-    const prog = document.getElementById("onboardProgress");
-    const nextBtn = document.getElementById("onboardNext");
-    const prevBtn = document.getElementById("onboardPrev");
-    if (!step || !body || !prog) return;
+  function endTour() {
+    try { localStorage.setItem("kpop_tour", TOUR_VERSION); } catch {}
+    const overlay = document.getElementById("tourOverlay");
+    if (overlay) overlay.style.display = "none";
+    if (_tourResizeHandler) {
+      window.removeEventListener("resize", _tourResizeHandler);
+      window.removeEventListener("scroll", _tourResizeHandler);
+      _tourResizeHandler = null;
+    }
+  }
+
+  function goToTourStep(idx) {
+    if (idx < 0 || idx >= TOUR_STEPS.length) return endTour();
+    _tourIdx = idx;
+    const step = TOUR_STEPS[idx];
+    // 先执行 setup（可能切 tab）
+    try { if (step.setup) step.setup(); } catch (e) { console.warn("tour setup", e); }
+
+    // 等 DOM 更新 + 滚动稳定再定位
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const target = document.querySelector(step.selector);
+        if (!target) {
+          // 目标找不到 → 跳过这一步
+          console.warn("[tour] 找不到目标:", step.selector);
+          if (step.final) return endTour();
+          return goToTourStep(idx + 1);
+        }
+        // 先滚动到屏幕中央
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+        // 等滚动完成再定位高亮 + tooltip
+        setTimeout(() => {
+          renderTourStep(step, idx, target);
+        }, 350);
+      }, 100);
+    });
+  }
+
+  function renderTourStep(step, idx, target) {
+    const total = TOUR_STEPS.length;
+    const rect = target.getBoundingClientRect();
+    const padding = 6;
+
+    // 定位"洞"
+    const hole = document.getElementById("tourHole");
+    hole.style.left = (rect.left - padding) + "px";
+    hole.style.top = (rect.top - padding) + "px";
+    hole.style.width = (rect.width + padding * 2) + "px";
+    hole.style.height = (rect.height + padding * 2) + "px";
+
+    // 渲染 tooltip 内容
+    const body = document.getElementById("ttBody");
+    const prog = document.getElementById("ttProgress");
+    const nextBtn = document.getElementById("ttNext");
+    const prevBtn = document.getElementById("ttPrev");
     body.innerHTML = `
-      <div class="onb-emoji">${step.emoji}</div>
-      <div class="onb-title">${step.title}</div>
-      <div class="onb-desc">${step.desc}</div>
-      ${step.tag ? `<div class="onb-tag">${escapeHtml(step.tag)}</div>` : ''}
+      <div class="em">${step.emoji || '✨'}</div>
+      <div class="text">
+        <div class="title">${escapeHtml(step.title)}</div>
+        <div class="desc">${step.desc}</div>
+      </div>
     `;
-    prog.innerHTML = ONBOARD_STEPS.map((_, i) => {
-      let cls = 'dot';
-      if (i === _onboardStep) cls += ' active';
-      else if (i < _onboardStep) cls += ' done';
+    prog.innerHTML = TOUR_STEPS.map((_, i) => {
+      let cls = 'd';
+      if (i < idx) cls += ' done';
+      else if (i === idx) cls += ' active';
       return `<span class="${cls}"></span>`;
     }).join('');
-    nextBtn.textContent = _onboardStep === total - 1 ? "开始使用 →" : "下一步";
-    prevBtn.style.display = _onboardStep === 0 ? "none" : "";
+    nextBtn.textContent = step.final ? "开始使用 ✨" : "下一步 →";
+    prevBtn.disabled = idx === 0;
+    prevBtn.style.opacity = idx === 0 ? "0.4" : "1";
+
+    // 决定 tooltip 放上面还是下面（看目标在屏幕中的位置）
+    const tooltip = document.getElementById("tourTooltip");
+    const screenH = window.innerHeight;
+    if (rect.top > screenH * 0.6) {
+      // 目标在屏幕下半部 → tooltip 放上面
+      tooltip.classList.add("placement-top");
+    } else {
+      tooltip.classList.remove("placement-top");
+    }
   }
 
-  function nextOnboardStep() {
-    if (_onboardStep === ONBOARD_STEPS.length - 1) {
-      finishOnboarding();
-    } else {
-      _onboardStep++;
-      renderOnboardingStep();
-    }
+  function nextTourStep() {
+    const step = TOUR_STEPS[_tourIdx];
+    if (step && step.final) return endTour();
+    goToTourStep(_tourIdx + 1);
   }
-  function prevOnboardStep() {
-    if (_onboardStep > 0) {
-      _onboardStep--;
-      renderOnboardingStep();
-    }
+  function prevTourStep() {
+    if (_tourIdx > 0) goToTourStep(_tourIdx - 1);
   }
-  function skipOnboard() { finishOnboarding(); }
-  function finishOnboarding() {
-    try { localStorage.setItem("kpop_onboard", ONBOARD_VERSION); } catch {}
-    document.getElementById("onboardModal").style.display = "none";
-  }
-  // 从设置里"重看"：清掉标记重新触发
-  function resetAndShowOnboarding() {
-    try { localStorage.removeItem("kpop_onboard"); } catch {}
-    showOnboarding(0);
+  function positionCurrentTourStep() {
+    // resize/scroll 时重新定位当前步骤
+    const step = TOUR_STEPS[_tourIdx];
+    if (!step) return;
+    const target = document.querySelector(step.selector);
+    if (target) renderTourStep(step, _tourIdx, target);
   }
 
   // 拉取剩余名额状态，渲染 banner，并按需禁用注册按钮
