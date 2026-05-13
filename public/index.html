@@ -678,92 +678,104 @@
     .qb-card { flex: 0 0 88%; }
   }
 
-  /* ============ 新手引导 ============ */
-  .onboard-bg {
+  /* ============ Spotlight 新手引导（光圈 + 浮卡）============ */
+  #tourOverlay {
     position: fixed; inset: 0;
-    background: rgba(15, 15, 35, 0.65);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     z-index: 300;
-    display: flex; align-items: center; justify-content: center;
-    padding: max(5vh, env(safe-area-inset-top)) 16px max(5vh, env(safe-area-inset-bottom));
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    pointer-events: none;  /* 默认让点击穿透，tooltip 自己开启 pointer-events */
   }
-  .onboard-card {
+  /* 高亮"洞"：用超大 box-shadow 制造挖洞效果（外部 dim、内部清晰） */
+  #tourHole {
+    position: fixed;
+    border-radius: 14px;
+    box-shadow: 0 0 0 9999px rgba(15, 15, 35, 0.70);
+    pointer-events: none;
+    transition: top .35s cubic-bezier(0.4, 0, 0.2, 1),
+                left .35s cubic-bezier(0.4, 0, 0.2, 1),
+                width .35s cubic-bezier(0.4, 0, 0.2, 1),
+                height .35s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: top, left, width, height;
+  }
+  /* 光环脉冲动画 */
+  #tourHole::after {
+    content: ''; position: absolute; inset: -4px;
+    border-radius: inherit;
+    border: 2px solid var(--primary);
+    animation: tourPulse 1.6s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes tourPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55); }
+    70%  { box-shadow: 0 0 0 12px rgba(124, 58, 237, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+  }
+  /* 浮动卡片 */
+  #tourTooltip {
+    position: fixed;
+    pointer-events: auto;
     background: var(--card);
-    border-radius: 20px;
-    width: 100%; max-width: 420px;
-    padding: 28px 24px 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     border: 1px solid var(--border);
-    position: relative;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    padding: 18px 18px 14px;
+    width: calc(100% - 32px);
+    max-width: 340px;
+    left: 50%; transform: translateX(-50%);
+    bottom: max(20px, env(safe-area-inset-bottom));
+    transition: bottom .35s ease, top .35s ease;
   }
-  .onboard-progress {
-    display: flex; gap: 6px; justify-content: center;
-    margin-bottom: 24px;
+  #tourTooltip.placement-top {
+    bottom: auto;
+    top: 20px;
   }
-  .onboard-progress .dot {
-    width: 8px; height: 8px; border-radius: 50%;
+  .tt-progress {
+    display: flex; gap: 4px; margin-bottom: 12px;
+  }
+  .tt-progress .d {
+    flex: 1; height: 3px; border-radius: 2px;
     background: var(--border);
-    transition: width .2s, background .2s;
   }
-  .onboard-progress .dot.active {
-    width: 26px; border-radius: 4px;
-    background: var(--primary);
+  .tt-progress .d.done, .tt-progress .d.active {
+    background: linear-gradient(90deg, var(--primary), var(--accent));
   }
-  .onboard-progress .dot.done {
-    background: var(--primary-soft);
+  .tt-body {
+    display: flex; gap: 12px; align-items: flex-start;
   }
-  .onboard-body {
-    text-align: center;
-    min-height: 240px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    animation: onbFadeIn .3s ease;
+  .tt-body .em {
+    font-size: 36px; line-height: 1; flex-shrink: 0;
   }
-  @keyframes onbFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+  .tt-body .text { flex: 1; min-width: 0; }
+  .tt-body .title {
+    font-size: 16px; font-weight: 800; color: var(--text);
+    margin-bottom: 4px;
   }
-  .onb-emoji {
-    font-size: 56px; line-height: 1; margin-bottom: 16px;
+  .tt-body .desc {
+    font-size: 13px; color: var(--text-soft); line-height: 1.6;
   }
-  .onb-title {
-    font-size: 22px; font-weight: 800; color: var(--text);
-    margin-bottom: 10px;
+  .tt-body .desc b { color: var(--primary); }
+  .tt-actions {
+    display: flex; gap: 8px; align-items: center;
+    margin-top: 14px;
   }
-  .onb-desc {
-    font-size: 14px; color: var(--text-soft); line-height: 1.7;
-    margin-bottom: 6px; max-width: 320px;
-  }
-  .onb-desc b { color: var(--primary); }
-  .onb-tag {
-    display: inline-block; margin-top: 12px;
-    background: var(--primary-soft); color: var(--primary-deep);
-    padding: 5px 12px; border-radius: 999px;
-    font-size: 12px; font-weight: 700;
-  }
-  .onboard-actions {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 22px; gap: 8px;
-  }
-  .onboard-skip {
+  .tt-skip {
     background: transparent; border: none;
-    color: var(--text-soft); font-size: 13px;
-    cursor: pointer; padding: 10px 6px;
+    color: var(--text-soft); font-size: 12px;
+    cursor: pointer; padding: 6px 4px;
   }
-  .onboard-prev {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--text-soft); padding: 10px 16px;
-    border-radius: 10px; font-size: 14px; cursor: pointer;
+  .tt-prev, .tt-next {
+    padding: 8px 14px; border-radius: 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border);
   }
-  .onboard-next {
+  .tt-prev {
+    background: transparent;
+    color: var(--text-soft);
+  }
+  .tt-prev:disabled, .tt-prev[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .tt-next {
     background: linear-gradient(135deg, var(--primary), var(--accent));
     color: #fff; border: none;
-    padding: 10px 22px; border-radius: 10px;
-    font-size: 14px; font-weight: 700; cursor: pointer;
     box-shadow: 0 4px 12px rgba(99, 102, 241, .22);
-    margin-left: auto;
   }
 
   /* ============ 教程折叠块 ============ */
