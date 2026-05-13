@@ -2300,12 +2300,13 @@
     if (picsDraft.length + files.length > 8) {
       return toast("一次最多 8 张截图（已有 " + picsDraft.length + " 张）", true);
     }
+    toast(`📤 正在压缩并上传 ${files.length} 张截图…`);
     try {
       const urls = await uploadFiles(files);
       picsDraft = picsDraft.concat(urls).slice(0, 8);
       renderPicsBox();
-      toast(`已上传 ${urls.length} 张`);
-    } catch (e) { toast(e.message, true); }
+      toast(`✅ 已上传 ${urls.length} 张`);
+    } catch (e) { toast("上传失败：" + e.message, true); }
   }
   async function submitParsePics() {
     if (!picsDraft.length) return toast("先点「📷 添加截图」上传", true);
