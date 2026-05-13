@@ -1225,6 +1225,50 @@
     pending: [],
   };
   function findSong(id) { return state.songs.find(s => s.id === id); }
+
+  // ===================== 女团成员表 =====================
+  // 用于新建歌曲时根据组合名自动建议位置占位
+  const KPOP_GROUPS = {
+    "aespa":         ["Karina", "Winter", "Giselle", "Ningning"],
+    "BLACKPINK":     ["Jisoo", "Jennie", "Rosé", "Lisa"],
+    "TWICE":         ["Nayeon", "Jeongyeon", "Momo", "Sana", "Jihyo", "Mina", "Dahyun", "Chaeyoung", "Tzuyu"],
+    "NewJeans":      ["Minji", "Hanni", "Danielle", "Haerin", "Hyein"],
+    "IVE":           ["Yujin", "Gaeul", "Rei", "Wonyoung", "Liz", "Leeseo"],
+    "ITZY":          ["Yeji", "Lia", "Ryujin", "Chaeryeong", "Yuna"],
+    "LE SSERAFIM":   ["Sakura", "Chaewon", "Yunjin", "Kazuha", "Eunchae"],
+    "(G)I-DLE":      ["Miyeon", "Minnie", "Soyeon", "Yuqi", "Shuhua"],
+    "ILLIT":         ["Yunah", "Minju", "Moka", "Wonhee", "Iroha"],
+    "KISS OF LIFE":  ["Belle", "Julie", "Natty", "Haneul"],
+    "NMIXX":         ["Lily", "Haewon", "Sullyoon", "Bae", "Jiwoo", "Kyujin"],
+    "BABYMONSTER":   ["Ruka", "Pharita", "Asa", "Ahyeon", "Rami", "Rora", "Chiquita"],
+    "Red Velvet":    ["Irene", "Seulgi", "Wendy", "Joy", "Yeri"],
+    "MAMAMOO":       ["Solar", "Moonbyul", "Wheein", "Hwasa"],
+    "fromis_9":      ["Saerom", "Hayoung", "Gyuri", "Jiwon", "Jisun", "Seoyeon", "Chaeyoung", "Nagyung", "Jiheon"],
+    "XG":            ["Jurin", "Chisa", "Hinata", "Harvey", "Jia", "Maya", "Cocona"],
+    "STAYC":         ["Sumin", "Sieun", "Isa", "Seeun", "Yoon", "J"],
+    "Apink":         ["Chorong", "Bomi", "Eunji", "Namjoo", "Hayoung"],
+    "EVERGLOW":      ["E:U", "Sihyeon", "Mia", "Onda", "Aisha", "Yiren"],
+    "Kep1er":        ["Yujin", "Xiaoting", "Mashiro", "Chaehyun", "Dayeon", "Hikaru", "Huening Bahiyyih", "Youngeun"],
+  };
+  // 别名归一化（接受常见拼法 / 大小写 / 全角 / 简写）
+  function normalizeArtist(s) {
+    if (!s) return "";
+    return s.trim().toLowerCase()
+      .replace(/[\(\(\)\)\s\-_\.·・]/g, "")
+      .replace(/girlsgeneration/g, "snsd");
+  }
+  const _normalizedGroupMap = (() => {
+    const map = {};
+    for (const [name, members] of Object.entries(KPOP_GROUPS)) {
+      map[normalizeArtist(name)] = { name, members };
+    }
+    return map;
+  })();
+  function suggestSlots(artist) {
+    const k = normalizeArtist(artist);
+    if (!k) return null;
+    return _normalizedGroupMap[k] || null;
+  }
   function findFriend(uid) { return state.friends.find(f => f.id === uid); }
 
   // ===================== 启动 =====================
