@@ -678,6 +678,94 @@
     .qb-card { flex: 0 0 88%; }
   }
 
+  /* ============ 新手引导 ============ */
+  .onboard-bg {
+    position: fixed; inset: 0;
+    background: rgba(15, 15, 35, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 300;
+    display: flex; align-items: center; justify-content: center;
+    padding: max(5vh, env(safe-area-inset-top)) 16px max(5vh, env(safe-area-inset-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .onboard-card {
+    background: var(--card);
+    border-radius: 20px;
+    width: 100%; max-width: 420px;
+    padding: 28px 24px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .onboard-progress {
+    display: flex; gap: 6px; justify-content: center;
+    margin-bottom: 24px;
+  }
+  .onboard-progress .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border);
+    transition: width .2s, background .2s;
+  }
+  .onboard-progress .dot.active {
+    width: 26px; border-radius: 4px;
+    background: var(--primary);
+  }
+  .onboard-progress .dot.done {
+    background: var(--primary-soft);
+  }
+  .onboard-body {
+    text-align: center;
+    min-height: 240px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    animation: onbFadeIn .3s ease;
+  }
+  @keyframes onbFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .onb-emoji {
+    font-size: 56px; line-height: 1; margin-bottom: 16px;
+  }
+  .onb-title {
+    font-size: 22px; font-weight: 800; color: var(--text);
+    margin-bottom: 10px;
+  }
+  .onb-desc {
+    font-size: 14px; color: var(--text-soft); line-height: 1.7;
+    margin-bottom: 6px; max-width: 320px;
+  }
+  .onb-desc b { color: var(--primary); }
+  .onb-tag {
+    display: inline-block; margin-top: 12px;
+    background: var(--primary-soft); color: var(--primary-deep);
+    padding: 5px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+  }
+  .onboard-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 22px; gap: 8px;
+  }
+  .onboard-skip {
+    background: transparent; border: none;
+    color: var(--text-soft); font-size: 13px;
+    cursor: pointer; padding: 10px 6px;
+  }
+  .onboard-prev {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-soft); padding: 10px 16px;
+    border-radius: 10px; font-size: 14px; cursor: pointer;
+  }
+  .onboard-next {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #fff; border: none;
+    padding: 10px 22px; border-radius: 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, .22);
+    margin-left: auto;
+  }
+
   /* ============ 教程折叠块 ============ */
   details.howto-block {
     background: var(--blue-soft); border: 1px solid var(--blue-soft);
