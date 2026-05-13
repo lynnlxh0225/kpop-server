@@ -2208,7 +2208,7 @@
 
   async function submitParse() {
     const text = document.getElementById("parseText").value.trim();
-    if (!text) return toast("请先粘贴聊天记录", true);
+    if (!text) return toast("请先输入或粘贴文字", true);
     if (ownedSongs().length === 0) return toast("你还不是任何歌曲的车主，先新建一首歌再来", true);
     const songId = document.getElementById("parseSongId").value;
     const btn = document.getElementById("parseBtn");
@@ -2218,10 +2218,68 @@
     try {
       const r = await API.post("/parse", { text, song_id: songId ? parseInt(songId, 10) : null });
       if (r.count === 0) {
-        toast("AI 没在这段聊天里识别到排练/路演 ☁️", true);
+        toast("AI 没识别到排练/路演 ☁️", true);
       } else {
         toast(`✨ 识别到 ${r.count} 条候选，请审核确认`);
         document.getElementById("parseText").value = "";
+      }
+      await loadPending();
+      renderInbox();
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
+  // ===================== 截图模式 =====================
+  let picsDraft = []; // ["/uploads/xxx.jpg", ...]
+  function renderPicsBox() {
+    const box = document.getElementById("picsBox");
+    const cnt = document.getElementById("picsCount");
+    if (!box) return;
+    box.innerHTML = picsDraft.map((u, i) => `
+      <div class="img-thumb" onclick="openLightbox('${escapeAttr(u)}')">
+        <img src="${escapeAttr(u)}" alt="" />
+        <span class="x" onclick="event.stopPropagation();picsDraft.splice(${i},1);renderPicsBox();" title="删除">×</span>
+      </div>
+    `).join("");
+    if (cnt) cnt.textContent = picsDraft.length ? `已选 ${picsDraft.length} 张` : '';
+  }
+  async function onPicsPicked(input) {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    input.value = "";
+    if (picsDraft.length + files.length > 8) {
+      return toast("一次最多 8 张截图（已有 " + picsDraft.length + " 张）", true);
+    }
+    try {
+      const urls = await uploadFiles(files);
+      picsDraft = picsDraft.concat(urls).slice(0, 8);
+      renderPicsBox();
+      toast(`已上传 ${urls.length} 张`);
+    } catch (e) { toast(e.message, true); }
+  }
+  async function submitParsePics() {
+    if (!picsDraft.length) return toast("先点「📷 添加截图」上传", true);
+    if (ownedSongs().length === 0) return toast("你还不是任何歌曲的车主，先新建一首歌再来", true);
+    const songId = document.getElementById("parseSongId").value;
+    const btn = document.getElementById("parsePicsBtn");
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "AI 看图中…（约 10-20 秒）";
+    try {
+      const r = await API.post("/parse-images", {
+        image_urls: picsDraft,
+        song_id: songId ? parseInt(songId, 10) : null,
+      });
+      if (r.count === 0) {
+        toast("AI 没在这些截图里识别到排练/路演 ☁️", true);
+      } else {
+        toast(`✨ 识别到 ${r.count} 条候选，请审核确认`);
+        picsDraft = [];
+        renderPicsBox();
       }
       await loadPending();
       renderInbox();

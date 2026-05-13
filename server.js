@@ -27,10 +27,12 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-only-change-me";
 const DB_PATH = process.env.DB_PATH || "./data/data.db";
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
-// AI 服务（默认 DeepSeek，OpenAI 兼容协议；可改成通义/Kimi 等同协议服务）
+// AI 服务（默认 DeepSeek，OpenAI 兼容协议；可改成通义/Kimi/智谱 等同协议服务）
 const AI_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || "";
 const AI_BASE_URL = process.env.AI_BASE_URL || "https://api.deepseek.com";
 const AI_MODEL = process.env.AI_MODEL || "deepseek-chat";
+// 视觉模型（多模态：看截图）。智谱 glm-4v-flash 免费、glm-4.5v 付费但便宜
+const AI_VISION_MODEL = process.env.AI_VISION_MODEL || "glm-4v-flash";
 
 if (JWT_SECRET === "dev-only-change-me") {
   console.warn("⚠️  请在 .env 改 JWT_SECRET");
@@ -1101,11 +1103,21 @@ function saveAttendance(kind, refId, items, songId) {
 }
 
 // ==================== AI 解析（微信群消息整理） ====================
-async function callAI(messages) {
+async function callAI(messages, opts = {}) {
   if (!AI_API_KEY) {
-    const err = new Error("后端未配置 AI key（DEEPSEEK_API_KEY），无法解析");
+    const err = new Error("后端未配置 AI key（DEEPSEEK_API_KEY / AI_API_KEY），无法解析");
     err.statusCode = 503;
     throw err;
+  }
+  const body = {
+    model: opts.model || AI_MODEL,
+    messages,
+    temperature: 0.1,
+    max_tokens: opts.maxTokens || 4000,
+  };
+  // 视觉模型多数不支持 response_format，所以做开关
+  if (opts.jsonMode !== false) {
+    body.response_format = { type: "json_object" };
   }
   let res;
   try {
@@ -1115,13 +1127,7 @@ async function callAI(messages) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${AI_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages,
-        temperature: 0.1,
-        max_tokens: 4000,
-        response_format: { type: "json_object" },
-      }),
+      body: JSON.stringify(body),
     });
   } catch (e) {
     throw new Error("AI 网络错误：" + e.message);
@@ -1136,6 +1142,23 @@ async function callAI(messages) {
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   if (!content) throw new Error("AI 返回内容为空");
   return content;
+}
+
+// 防御性 JSON 提取：先 JSON.parse，失败的话用正则抽 {...} 再 parse
+function extractJson(raw) {
+  if (typeof raw !== "string") return null;
+  try { return JSON.parse(raw); } catch {}
+  // 去掉 markdown code fence
+  const fenced = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  try { return JSON.parse(fenced); } catch {}
+  // 抽第一个 { 到最后一个 } 之间的子串
+  const a = raw.indexOf("{");
+  const b = raw.lastIndexOf("}");
+  if (a >= 0 && b > a) {
+    const sub = raw.slice(a, b + 1);
+    try { return JSON.parse(sub); } catch {}
+  }
+  return null;
 }
 
 function buildParseMessages({ user, friends, songs, text, hintSongId }) {
@@ -1247,9 +1270,8 @@ app.post("/api/parse", authRequired, parseLimiter, async (req, res) => {
     return res.status(e.statusCode || 502).json({ error: e.message || "AI 调用失败" });
   }
 
-  let parsed;
-  try { parsed = JSON.parse(raw); }
-  catch {
+  const parsed = extractJson(raw);
+  if (!parsed) {
     console.error("[parse] AI 输出非 JSON:", raw.slice(0, 500));
     return res.status(502).json({ error: "AI 输出不是合法 JSON，请重试" });
   }
@@ -1290,6 +1312,203 @@ app.post("/api/parse", authRequired, parseLimiter, async (req, res) => {
         req.userId, kind, songId,
         JSON.stringify(data),
         text.toString().slice(0, 5000),
+        (it.ai_note || "").toString().slice(0, 500),
+        now()
+      );
+      created.push({ id: r.lastInsertRowid, kind, ...data });
+    }
+  });
+  tx(items);
+
+  res.json({ created, count: created.length });
+});
+
+// ===== 截图 → 多模态 AI 识别 =====
+function imagePathFromUrl(url) {
+  // 接受 "/uploads/xxx.jpg" 这种形式，必须是我们自己的
+  if (typeof url !== "string") return null;
+  const m = url.match(/^\/uploads\/([\w.-]+)$/);
+  if (!m) return null;
+  return path.join(UPLOAD_DIR, m[1]);
+}
+function imageToDataUrl(filepath) {
+  if (!fs.existsSync(filepath)) return null;
+  const ext = (path.extname(filepath) || ".jpg").toLowerCase().slice(1);
+  const mime = ext === "png" ? "image/png"
+             : ext === "webp" ? "image/webp"
+             : ext === "gif" ? "image/gif"
+             : ext === "heic" ? "image/heic"
+             : "image/jpeg";
+  const buf = fs.readFileSync(filepath);
+  return `data:${mime};base64,${buf.toString("base64")}`;
+}
+
+function buildVisionMessages({ user, friends, songs, hintSongId }) {
+  const today = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const weekDay = "日一二三四五六"[today.getDay()];
+
+  const people = [
+    { id: user.id, name: user.name, self: true },
+    ...friends.map((f) => ({ id: f.id, name: f.name })),
+  ];
+  const peopleText = people
+    .map((p) => `- id=${p.id} 名字="${p.name}"${p.self ? "（当前用户自己）" : ""}`)
+    .join("\n");
+
+  const songsText = songs.length
+    ? songs.map((s) => `- id=${s.id} 歌名="${s.title}"${s.artist ? ` 组合="${s.artist}"` : ""}`).join("\n")
+    : "（用户作为车主的歌曲列表为空）";
+
+  const hintLine = hintSongId
+    ? `用户提示：这些截图主要在讨论 id=${hintSongId} 这首歌；如无明确反证就关联到这首歌。`
+    : "用户未指定关联歌曲。请根据截图判断每条 item 关联到上面歌曲列表里的 id；判断不出时 song_id 留 null。";
+
+  // 系统提示和 buildParseMessages 类似，但说明输入是聊天截图
+  const systemPrompt = `你是 K-pop 翻跳团队的微信群消息整理助手。任务：用户上传了若干张微信群聊截图，请识别出所有「排练（rehearsal）」和「路演（performance）」安排，输出严格 JSON。
+
+== 输出规则（务必严格遵守）==
+1. 只输出 JSON 对象，不要 markdown 代码块、不要解释文字。
+2. 顶层结构：{"items": [...]}, items 是数组（可以为空）。
+3. 每个 item 必填字段：
+   - kind: "rehearsal" 或 "performance"
+   - song_id: 整数或 null（必须来自给定的歌曲列表）
+   - song_title_guess: 字符串，你认为对应的歌名
+   - date: "YYYY-MM-DD"。相对日期（明天/后天/周六）必须基于今天换算成绝对日期
+   - time: "HH:MM"（24 小时制）或 ""
+   - location: 字符串（地点）
+   - outfit: 字符串
+   - notes: 字符串
+   - attendance: 数组，每项 {"user_id": 整数, "name": 字符串, "status": "yes"|"no"|"maybe"}
+   - ai_note: 字符串，简要说明依据或不确定之处（中文，不超过 60 字）
+4. kind="performance" 额外字段：name（活动名，必填）、city（城市）
+5. attendance 只能引用上面"成员列表"里的 user_id 和 name；截图里有但列表里没有的人忽略。
+6. 出席态度推断："我去/+1/收到"→yes；"不去/请假"→no；"看看/再说"→maybe
+7. 同事件多次改动只输出最终版。
+8. 没有任何排练/路演内容时输出 {"items": []}。
+9. 截图里看不清的字段留空字符串。`;
+
+  const userText = `== 上下文 ==
+今天日期：${todayStr}（周${weekDay}）
+当前用户：id=${user.id} 名字="${user.name}"
+
+成员列表（attendance 仅能引用这里的人）：
+${peopleText}
+
+可关联的歌曲列表（song_id 只能从这里选，或 null）：
+${songsText}
+
+${hintLine}
+
+接下来是若干张微信群聊截图，请识别其中的排练 / 路演信息，按系统提示输出 JSON。`;
+
+  return { systemPrompt, userText };
+}
+
+const parseImgLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 6,
+  keyGenerator: (req) => `parse-img-${req.userId || req.ip}`,
+  message: { error: "识别太频繁了，等 1 分钟再试" },
+});
+
+app.post("/api/parse-images", authRequired, parseImgLimiter, async (req, res) => {
+  const { image_urls, song_id: hintRaw } = req.body || {};
+  if (!Array.isArray(image_urls) || image_urls.length === 0) {
+    return res.status(400).json({ error: "请先上传至少一张截图" });
+  }
+  if (image_urls.length > 8) {
+    return res.status(400).json({ error: "一次最多 8 张截图" });
+  }
+
+  const hintSongId = hintRaw ? parseInt(hintRaw, 10) || null : null;
+  const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.userId);
+  const friends = db.prepare(`
+    SELECT u.id, u.name FROM friendships f
+    JOIN users u ON u.id = (CASE WHEN f.user_a_id=? THEN f.user_b_id ELSE f.user_a_id END)
+    WHERE f.user_a_id=? OR f.user_b_id=?
+  `).all(req.userId, req.userId, req.userId);
+  const ownedSongs = db.prepare("SELECT id, title, artist FROM songs WHERE owner_id=?").all(req.userId);
+  if (ownedSongs.length === 0) {
+    return res.status(400).json({ error: "你还不是任何歌曲的车主，请先新建一首歌再上传截图" });
+  }
+
+  // 读所有图片转 base64 data URL
+  const dataUrls = [];
+  for (const u of image_urls) {
+    const fp = imagePathFromUrl(u);
+    if (!fp) return res.status(400).json({ error: `非法图片地址：${u}` });
+    const du = imageToDataUrl(fp);
+    if (!du) return res.status(400).json({ error: `图片不存在：${u}` });
+    dataUrls.push(du);
+  }
+
+  const { systemPrompt, userText } = buildVisionMessages({ user, friends, songs: ownedSongs, hintSongId });
+
+  // 多模态 messages：user content 是数组，第一项 text，后面是 image_url
+  const messages = [
+    { role: "system", content: systemPrompt },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: userText },
+        ...dataUrls.map((u) => ({ type: "image_url", image_url: { url: u } })),
+      ],
+    },
+  ];
+
+  let raw;
+  try {
+    raw = await callAI(messages, { model: AI_VISION_MODEL, jsonMode: false, maxTokens: 4000 });
+  } catch (e) {
+    console.error("[parse-images] AI 调用失败:", e.message);
+    return res.status(e.statusCode || 502).json({ error: e.message || "AI 调用失败" });
+  }
+
+  const parsed = extractJson(raw);
+  if (!parsed) {
+    console.error("[parse-images] AI 输出非 JSON:", raw.slice(0, 500));
+    return res.status(502).json({ error: "AI 输出不是合法 JSON，请重试或换张清晰的图" });
+  }
+
+  const items = Array.isArray(parsed && parsed.items) ? parsed.items : [];
+  const validSongIds = new Set(ownedSongs.map((s) => s.id));
+  const validUserIds = new Set([user.id, ...friends.map((f) => f.id)]);
+
+  const insertStmt = db.prepare(`
+    INSERT INTO pending_items (user_id, kind, song_id, data, raw_text, ai_note, created_at, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+  `);
+  const created = [];
+  const raw_text_marker = `[截图识别] ${image_urls.join(" ")}`;
+  const tx = db.transaction((arr) => {
+    for (const it of arr) {
+      const kind = it.kind === "performance" ? "performance" : "rehearsal";
+      if (!it.date) continue;
+      const songId = validSongIds.has(it.song_id) ? it.song_id : (hintSongId && validSongIds.has(hintSongId) ? hintSongId : null);
+      const att = Array.isArray(it.attendance)
+        ? it.attendance.filter((a) => a && validUserIds.has(a.user_id) && ["yes", "no", "maybe"].includes(a.status))
+        : [];
+      const data = {
+        kind,
+        song_id: songId,
+        song_title_guess: (it.song_title_guess || "").toString().slice(0, 100),
+        date: (it.date || "").toString().slice(0, 20),
+        time: (it.time || "").toString().slice(0, 10),
+        location: (it.location || "").toString().slice(0, 200),
+        outfit: (it.outfit || "").toString().slice(0, 200),
+        notes: (it.notes || "").toString().slice(0, 500),
+        attendance: att,
+      };
+      if (kind === "performance") {
+        data.name = (it.name || it.song_title_guess || "未命名活动").toString().slice(0, 100);
+        data.city = (it.city || "").toString().slice(0, 50);
+      }
+      const r = insertStmt.run(
+        req.userId, kind, songId,
+        JSON.stringify(data),
+        raw_text_marker.slice(0, 5000),
         (it.ai_note || "").toString().slice(0, 500),
         now()
       );
