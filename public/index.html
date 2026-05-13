@@ -1287,7 +1287,11 @@
       const attHtml = (r.attendance || []).map(a => {
         const color = a.status === 'yes' ? 'success' : a.status === 'no' ? 'danger' : 'warn';
         const txt = a.status === 'yes' ? '✓ 来' : a.status === 'no' ? '✗ 不来' : '? 待定';
-        return `<span class="chip" style="background:var(--purple-soft);color:var(--purple);">${a.avatar || '👤'} ${escapeHtml(a.name)} <span class="pos" style="color:var(--${color});">${txt}</span></span>`;
+        const canKick = isOwner && a.user_id !== s.owner_id;
+        const kickBtn = canKick
+          ? `<span class="leave-x" onclick="event.stopPropagation();removeRehAtt(${r.id}, ${a.user_id}, '${escapeAttr(a.name)}')" title="把 TA 从这次排练移除">×</span>`
+          : '';
+        return `<span class="chip" style="background:var(--purple-soft);color:var(--purple);">${a.avatar || '👤'} ${escapeHtml(a.name)} <span class="pos" style="color:var(--${color});">${txt}</span>${kickBtn}</span>`;
       }).join("");
       const myAttHtml = (!isLeft) ? `
         <div class="my-att-bar">
