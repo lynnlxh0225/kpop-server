@@ -12,6 +12,15 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>K-pop 随舞管理器</title>
+<!-- 主题切换：在样式加载前应用 data-theme，避免视觉闪烁 -->
+<script>
+(function() {
+  try {
+    var t = localStorage.getItem("kpop_theme") || "aespa";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <style>
   /* ====================================================================
      皮肤主题：默认 aespa，可通过 <html data-theme="..."> 切换
