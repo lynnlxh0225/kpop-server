@@ -568,6 +568,29 @@
 
   <!-- 歌曲列表 -->
   <section class="page active" id="page-songs">
+    <!-- Hero 卡片：欢迎语 + 概览指标 + K-pop 装饰 -->
+    <div class="hero-card">
+      <svg class="hero-deco" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
+        <circle cx="350" cy="40" r="60" fill="rgba(255,255,255,0.08)"/>
+        <circle cx="320" cy="170" r="35" fill="rgba(255,255,255,0.06)"/>
+        <circle cx="40" cy="180" r="50" fill="rgba(255,255,255,0.05)"/>
+        <path d="M0,150 Q100,120 200,140 T400,130" stroke="rgba(255,255,255,0.12)" stroke-width="2" fill="none"/>
+        <path d="M0,170 Q100,150 200,165 T400,155" stroke="rgba(255,255,255,0.08)" stroke-width="2" fill="none"/>
+      </svg>
+      <div class="hero-content">
+        <div class="hero-greeting">Hey <span id="heroName">~</span> 👋</div>
+        <div class="hero-sub">今天也是跳舞的一天 🎵</div>
+        <div class="hero-stats">
+          <div class="hero-stat"><b id="heroSongs">0</b><span>首歌</span></div>
+          <div class="hero-stat"><b id="heroFriends">0</b><span>位好友</span></div>
+          <div class="hero-stat"><b id="heroUpcoming">0</b><span>近期安排</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 近期安排轮播 -->
+    <div class="quick-banner" id="quickBanner"></div>
+
     <div class="page-header">
       <h2>我的歌曲</h2>
       <button class="btn" onclick="openSongModal()">+ 新建歌曲</button>
