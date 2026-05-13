@@ -87,6 +87,7 @@ db.exec(`
     artist TEXT DEFAULT '',
     type TEXT DEFAULT 'new',
     notes TEXT DEFAULT '',
+    position_slots TEXT NOT NULL DEFAULT '[]',
     created_at INTEGER NOT NULL,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
   );
