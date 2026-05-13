@@ -1614,6 +1614,7 @@
       if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">🚗 我是车主</span>';
       else if (s.my_role === 'member') roleBadge = '<span class="badge role-member">🚪 已加入</span>';
       else roleBadge = '<span class="badge role-left">已退出</span>';
+      const privateMark = s.private ? '<span class="badge" style="background:#fef3c7;color:#92400e;">🔒 私密</span>' : '';
       return `
         <div class="song-card ${s.my_role === 'left' ? 'left' : ''}" onclick="openSongDetail(${s.id})">
           <div class="title">${escapeHtml(s.title)}</div>
@@ -1621,6 +1622,7 @@
           <div class="owner-line">🚗 车主：${escapeHtml(s.owner ? s.owner.name : '?')}</div>
           <div class="badges">
             ${roleBadge}
+            ${privateMark}
             <span class="badge type">${s.type === 'new' ? '新歌' : '经典'}</span>
             <span class="badge team">👥 ${activeTeam.length} 人</span>
             <span class="badge rehear">📅 ${rehCount} 排</span>
