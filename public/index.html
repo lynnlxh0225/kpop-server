@@ -1619,7 +1619,8 @@
       const rehCount = (s.rehearsals || []).length;
       const perfCount = (s.performances || []).filter(p => p.status !== 'no_show').length;
       let roleBadge = '';
-      if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">🚗 我是车主</span>';
+      if (!s.claimed) roleBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;">🙋 待认领</span>';
+      else if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">🚗 我是车主</span>';
       else if (s.my_role === 'member') roleBadge = '<span class="badge role-member">🚪 已加入</span>';
       else roleBadge = '<span class="badge role-left">已退出</span>';
       const privateMark = s.private ? '<span class="badge" style="background:#fef3c7;color:#92400e;">🔒 私密</span>' : '';
