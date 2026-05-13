@@ -2003,13 +2003,23 @@
       return;
     }
     try {
-      await Promise.all(changes.map(c =>
-        API.put(`/songs/${currentSongId}/members/${c.uid}/position`, { position: c.position })
-      ));
+      // 1. 先保存 slot 列表
+      if (slotsChanged) {
+        await API.patch(`/songs/${currentSongId}`, { position_slots: editSlotsDraft.slice() });
+      }
+      // 2. 再保存成员位置改动
+      if (changes.length) {
+        await Promise.all(changes.map(c =>
+          API.put(`/songs/${currentSongId}/members/${c.uid}/position`, { position: c.position })
+        ));
+      }
       await loadSongs();
       renderTeam();
       closeModal("editPositionsModal");
-      toast(`已更新 ${changes.length} 个位置`);
+      const msgs = [];
+      if (slotsChanged) msgs.push(`位置列表`);
+      if (changes.length) msgs.push(`${changes.length} 个成员位置`);
+      toast(`已更新 ${msgs.join(' + ')}`);
     } catch (e) { toast(e.message, true); }
   }
 
