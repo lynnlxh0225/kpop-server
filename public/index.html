@@ -73,8 +73,8 @@
     background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
     /* 极淡的几何背景：右上 + 左下两个柔焦圆点 */
     background-image:
-      radial-gradient(circle at 92% 8%, rgba(99, 102, 241, 0.07) 0%, transparent 35%),
-      radial-gradient(circle at 8% 95%, rgba(59, 130, 246, 0.06) 0%, transparent 40%);
+      radial-gradient(circle at 92% 8%, var(--bg-glow-a) 0%, transparent 35%),
+      radial-gradient(circle at 8% 95%, var(--bg-glow-b) 0%, transparent 40%);
     background-attachment: fixed;
     min-height: 100vh;
     /* 移动端：禁用整页弹性回弹（防止顶部下拉刷新页面），但内部容器仍可滚动 */
