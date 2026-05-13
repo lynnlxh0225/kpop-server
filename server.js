@@ -1812,6 +1812,16 @@ app.post("/api/parse-images", authRequired, parseImgLimiter, async (req, res) =>
   res.json({ created, count: created.length });
 });
 
+// 我今日 AI 配额用量
+app.get("/api/me/quota", authRequired, (req, res) => {
+  const out = {};
+  for (const kind of Object.keys(DAILY_QUOTA)) {
+    const used = getUsage(req.userId, kind);
+    out[kind] = { used, max: DAILY_QUOTA[kind], remaining: Math.max(0, DAILY_QUOTA[kind] - used) };
+  }
+  res.json({ date: todayStr(), quota: out });
+});
+
 // 我的待确认列表
 app.get("/api/pending", authRequired, (req, res) => {
   const rows = db.prepare(`
