@@ -116,8 +116,9 @@
   }
   nav.tabs button {
     flex: 1; border: none; background: transparent; color: var(--text-soft);
-    padding: 10px 14px; border-radius: 10px; font-weight: 600; font-size: 14px; white-space: nowrap;
+    padding: 12px 14px; border-radius: 10px; font-weight: 600; font-size: 14px; white-space: nowrap;
     position: relative;
+    min-height: 44px; /* 苹果 HIG 触摸目标最小高度 */
   }
   nav.tabs button.active {
     background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%); color: white;
