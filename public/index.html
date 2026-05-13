@@ -104,8 +104,15 @@
 
   nav.tabs {
     display: flex; gap: 6px; margin: 16px 0 12px;
-    background: white; padding: 6px; border-radius: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 6px; border-radius: 14px;
     box-shadow: var(--shadow); overflow-x: auto;
+    /* 滚动时 tab 栏吸顶，方便手机端快速切换 */
+    position: sticky;
+    top: 8px;
+    z-index: 20;
   }
   nav.tabs button {
     flex: 1; border: none; background: transparent; color: var(--text-soft);
