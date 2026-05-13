@@ -756,17 +756,20 @@
   <section class="page" id="page-settings">
     <div class="page-header"><h2>设置</h2></div>
     <div class="setting-card">
-      <h3>我的邀请码</h3>
-      <p>把下面的邀请码或邀请链接发给朋友，她们注册时填这个码就会自动成为你的好友。</p>
+      <h3>邀请码</h3>
       <div class="invite-code-box">
         <code id="myInviteCode">--------</code>
         <button class="copy-btn" onclick="copyMyCode()">复制</button>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
         <input id="myInviteLink" readonly />
         <button class="copy-btn" onclick="copyMyLink()">复制链接</button>
       </div>
-      <button class="btn ghost small" onclick="regenerateMyInvite()" style="margin-top:8px;">🔄 重置邀请码（旧的立即失效）</button>
+      <details style="margin-top:8px;">
+        <summary style="font-size:12px;color:var(--text-soft);cursor:pointer;">怎么用 · 重置</summary>
+        <p style="font-size:12px;color:var(--text-soft);margin:6px 0;">朋友注册时填这个码或点你分享的链接，会自动加为好友。</p>
+        <button class="btn ghost small" onclick="regenerateMyInvite()">🔄 重置邀请码</button>
+      </details>
     </div>
     <div class="setting-card">
       <h3>账号</h3>
