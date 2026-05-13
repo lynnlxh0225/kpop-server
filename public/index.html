@@ -1067,9 +1067,19 @@
 <!-- 编辑成员位置（车主用） -->
 <div class="modal-bg" id="editPositionsModal">
   <div class="modal">
-    <h3>编辑队伍位置</h3>
-    <p style="font-size:13px;color:var(--text-soft);">每个成员对应一个位置 / 担当（比如 Karina、Winter、Center 这种）。</p>
+    <h3>编辑队伍</h3>
+    <div style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">位置 = 这首歌需要几个担当（比如 Karina、Winter）。少人版 / 伴舞版可以增删。</div>
+
+    <label class="field">位置列表</label>
+    <div id="editSlotsBox" class="slot-chips" style="margin-bottom:8px;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <input id="editNewSlotInput" placeholder="加位置（Karina / 伴舞 1 ...）" style="flex:1;" />
+      <button class="btn ghost small" type="button" onclick="addEditSlot()">+ 加</button>
+    </div>
+
+    <label class="field" style="margin-top:6px;" id="editMemberPosLabel">成员当前位置（可手动改）</label>
     <div id="editPositionsList"></div>
+
     <div class="footer">
       <button class="btn ghost" onclick="closeModal('editPositionsModal')">取消</button>
       <button class="btn" onclick="saveAllPositions()">保存</button>
