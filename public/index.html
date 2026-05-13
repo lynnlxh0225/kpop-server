@@ -1797,6 +1797,53 @@
     } catch (e) { toast(e.message, true); }
   }
 
+  // 认领无主歌曲
+  async function claimOwner() {
+    if (!confirm("确认认领车主？认领后你将负责管理这首歌的排练/路演。")) return;
+    try {
+      await API.post(`/songs/${currentSongId}/claim`);
+      await loadSongs();
+      renderSongs();
+      openSongDetail(currentSongId);
+      toast("🎉 你现在是车主了");
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // 转让车主
+  let transferOwnerSelected = null;
+  function openTransferOwnerModal() {
+    const s = findSong(currentSongId); if (!s) return;
+    transferOwnerSelected = null;
+    const candidates = (s.team || []).filter(t => t.status === 'active' && t.user_id !== state.user.id);
+    const picker = document.getElementById("transferOwnerPicker");
+    if (!candidates.length) {
+      picker.innerHTML = `<div style="font-size:13px;color:var(--text-soft);">还没有其他 active 成员，先加好友进队伍才能转让</div>`;
+    } else {
+      picker.innerHTML = candidates.map(t =>
+        `<span class="picker-chip" onclick="selectTransferOwner(${t.user_id}, this)">${t.avatar || '👤'} ${escapeHtml(t.name)}${t.position ? ' · ' + escapeHtml(t.position) : ''}</span>`
+      ).join("");
+    }
+    openModal("transferOwnerModal");
+  }
+  function selectTransferOwner(uid, el) {
+    document.querySelectorAll("#transferOwnerPicker .picker-chip").forEach(c => c.classList.remove("selected"));
+    el.classList.add("selected");
+    transferOwnerSelected = uid;
+  }
+  async function confirmTransferOwner() {
+    if (!transferOwnerSelected) return toast("请先选一个成员", true);
+    const target = (findSong(currentSongId).team || []).find(t => t.user_id === transferOwnerSelected);
+    if (!confirm(`确认把车主转给「${target ? target.name : '该成员'}」？\n转让后你变成普通成员，对方拿到全部管理权限。`)) return;
+    try {
+      await API.post(`/songs/${currentSongId}/transfer-owner`, { user_id: transferOwnerSelected });
+      await loadSongs();
+      renderSongs();
+      openSongDetail(currentSongId);
+      closeModal("transferOwnerModal");
+      toast(`🚗 已转给「${target ? target.name : '对方'}」`);
+    } catch (e) { toast(e.message, true); }
+  }
+
   // ===================== 歌曲详情 =====================
   let currentSongId = null;
   let currentSubtab = "team";
