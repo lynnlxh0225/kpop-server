@@ -1789,11 +1789,16 @@
     const s = findSong(id);
     if (!s) return;
     document.getElementById("detailTitle").textContent = s.title;
+    const ownerLabel = !s.claimed ? '待认领（暂代：' + (s.owner?.name || '?') + '）' : (s.owner?.name || '?');
     document.getElementById("detailMeta").textContent =
-      `${s.artist || "未知组合"} · ${s.type === 'new' ? '新歌' : '经典'} · 车主 ${s.owner?.name || '?'}${s.notes ? ' · ' + s.notes : ''}`;
+      `${s.artist || "未知组合"} · ${s.type === 'new' ? '新歌' : '经典'} · 车主 ${ownerLabel}${s.notes ? ' · ' + s.notes : ''}`;
     // 角色横幅
     const banner = document.getElementById("roleBanner");
-    if (s.my_role === 'owner') {
+    const isActiveMember = (s.team || []).some(t => t.user_id === state.user.id && t.status === 'active');
+    if (!s.claimed && isActiveMember) {
+      banner.className = 'role-banner owner';
+      banner.innerHTML = '🙋 这首歌还没有车主，作为队员你可以点下面按钮认领；不认领也能编辑歌曲、加排练 / 路演。';
+    } else if (s.my_role === 'owner') {
       banner.className = 'role-banner owner';
       banner.textContent = '🚗 你是车主：可以修改所有信息';
     } else if (s.my_role === 'member') {
@@ -1806,8 +1811,13 @@
     // 顶部操作按钮
     const actions = document.getElementById("detailActions");
     let html = '';
-    if (s.my_role === 'owner') {
+    if (!s.claimed && isActiveMember) {
+      html += `<button class="btn small" onclick="claimOwner()">🙋 我来当车主</button>`;
       html += `<button class="btn small ghost" onclick="openSongModal(${s.id})">编辑歌曲信息</button>`;
+      html += `<button class="btn small danger" onclick="deleteCurrentSong()">删除歌曲</button>`;
+    } else if (s.my_role === 'owner') {
+      html += `<button class="btn small ghost" onclick="openSongModal(${s.id})">编辑歌曲信息</button>`;
+      html += `<button class="btn small ghost" onclick="openTransferOwnerModal()">🔄 转让车主</button>`;
       html += `<button class="btn small danger" onclick="deleteCurrentSong()">删除歌曲</button>`;
     } else if (s.my_role === 'member') {
       html += `<button class="btn small danger" onclick="leaveCurrentSong()">退出歌曲</button>`;
