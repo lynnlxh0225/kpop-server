@@ -1477,14 +1477,14 @@ app.post("/api/parse-images", authRequired, parseImgLimiter, async (req, res) =>
 
   const { systemPrompt, userText } = buildVisionMessages({ user, friends, songs: ownedSongs, hintSongId });
 
-  // 多模态 messages：user content 是数组，第一项 text，后面是 image_url
+  // 多模态 messages：智谱官方示例图片在前、文字在后；system 会被合并到 user 文本前面
   const messages = [
     { role: "system", content: systemPrompt },
     {
       role: "user",
       content: [
-        { type: "text", text: userText },
         ...dataUrls.map((u) => ({ type: "image_url", image_url: { url: u } })),
+        { type: "text", text: userText },
       ],
     },
   ];
