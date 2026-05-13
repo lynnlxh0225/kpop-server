@@ -10,13 +10,20 @@
 <title>K-pop 随舞管理器</title>
 <style>
   :root {
-    --pink: #ff5fa2; --pink-soft: #ffd6e8;
-    --purple: #a855f7; --purple-soft: #ede9fe;
-    --yellow: #fde047;
-    --bg: #fff7fb; --card: #fff;
-    --text: #1f1233; --text-soft: #6b5b7f;
-    --border: #f1d9e8;
-    --shadow: 0 6px 24px rgba(255, 95, 162, 0.08);
+    /* 新主色：清新蓝白 */
+    --blue: #3b82f6;       --blue-soft: #dbeafe;
+    --blue-deep: #1e40af;  --blue-ink: #1e3a8a;
+    --indigo: #6366f1;     --indigo-soft: #e0e7ff;
+    /* 兼容老变量：粉紫色全部映射到蓝色系，避免大改 HTML */
+    --pink: var(--blue);          --pink-soft: var(--blue-soft);
+    --purple: var(--indigo);      --purple-soft: var(--indigo-soft);
+    --yellow: #fbbf24;
+    --bg: #f5f8ff;        /* 极浅蓝白 */
+    --card: #fff;
+    --text: #0f172a;      /* 深蓝灰 */
+    --text-soft: #64748b; /* 蓝灰二级文字 */
+    --border: #e2e8f0;    /* 浅蓝灰边 */
+    --shadow: 0 6px 24px rgba(59, 130, 246, 0.10);
     --success: #10b981; --warn: #f59e0b; --danger: #ef4444; --gray: #9ca3af;
   }
   * { box-sizing: border-box; }
@@ -24,6 +31,12 @@
     margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
+    /* 极淡的几何背景：右上 + 左下两个柔焦圆点 */
+    background-image:
+      radial-gradient(circle at 92% 8%, rgba(99, 102, 241, 0.07) 0%, transparent 35%),
+      radial-gradient(circle at 8% 95%, rgba(59, 130, 246, 0.06) 0%, transparent 40%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
   a { color: var(--purple); text-decoration: none; cursor: pointer; }
   button { font-family: inherit; cursor: pointer; }
