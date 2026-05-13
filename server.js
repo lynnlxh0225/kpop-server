@@ -653,6 +653,92 @@ app.delete("/api/friends/:userId", authRequired, (req, res) => {
   res.json({ ok: true });
 });
 
+// 查好友跳的舞 —— 隐私敏感字段已过滤
+app.get("/api/friends/:userId/songs", authRequired, (req, res) => {
+  const friendId = parseInt(req.params.userId, 10);
+  if (!friendId) return res.status(400).json({ error: "参数错误" });
+  if (friendId === req.userId) return res.status(400).json({ error: "不能查自己" });
+  if (!areFriends(req.userId, friendId)) return res.status(403).json({ error: "你们不是好友" });
+
+  const friend = db.prepare("SELECT id, name, avatar FROM users WHERE id=?").get(friendId);
+  if (!friend) return res.status(404).json({ error: "用户不存在" });
+
+  // 该好友作为车主 或 song_members 任一状态（含 left）的非私密歌曲
+  const rows = db.prepare(`
+    SELECT s.*,
+      CASE WHEN s.owner_id=? THEN 'owner'
+           WHEN sm.user_id=? AND sm.status='active' THEN 'active'
+           WHEN sm.user_id=? AND sm.status='left' THEN 'left'
+      END AS friend_role,
+      sm.position AS friend_position,
+      sm.joined_at AS friend_joined_at,
+      sm.left_at AS friend_left_at
+    FROM songs s
+    LEFT JOIN song_members sm ON sm.song_id=s.id AND sm.user_id=?
+    WHERE s.private=0 AND (s.owner_id=? OR sm.user_id=?)
+    ORDER BY s.created_at DESC
+  `).all(friendId, friendId, friendId, friendId, friendId, friendId);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const songs = rows.map((s) => {
+    // 队伍统计
+    const activeCount = db.prepare("SELECT COUNT(*) AS c FROM song_members WHERE song_id=? AND status='active'").get(s.id).c;
+    const ownerActive = db.prepare("SELECT 1 FROM song_members WHERE song_id=? AND user_id=? AND status='active'").get(s.id, s.owner_id) ? 1 : 0;
+    const teamSize = activeCount + (ownerActive ? 0 : 1); // 车主有可能没在 song_members 表（兜底）
+
+    let slots = [];
+    try { slots = JSON.parse(s.position_slots || "[]"); } catch {}
+
+    // 未来排练：仅返回数字 + 最近一场日期
+    const futureReh = db.prepare(`
+      SELECT date FROM rehearsals WHERE song_id=? AND date >= ? ORDER BY date ASC
+    `).all(s.id, today);
+    // 未来路演：数字 + 最近一场日期
+    const futurePerf = db.prepare(`
+      SELECT date FROM performances WHERE song_id=? AND date >= ? AND status != 'no_show' ORDER BY date ASC
+    `).all(s.id, today);
+
+    // 已完成路演：仅返回 name + city + date（不返回 attendance、location、outfit）
+    const donePerf = db.prepare(`
+      SELECT name, city, date FROM performances WHERE song_id=? AND status='done' AND date < ? ORDER BY date DESC
+    `).all(s.id, today);
+
+    // 我（当前用户）也在这首歌？
+    const myOverlap = db.prepare(`
+      SELECT 1 FROM song_members WHERE song_id=? AND user_id=? AND status='active'
+    `).get(s.id, req.userId) || s.owner_id === req.userId;
+
+    const owner = publicUser(db.prepare("SELECT * FROM users WHERE id=?").get(s.owner_id));
+
+    return {
+      id: s.id,
+      title: s.title,
+      artist: s.artist,
+      type: s.type,
+      owner,
+      friend_role: s.friend_role,
+      friend_position: s.friend_position || "",
+      friend_joined_at: s.friend_joined_at,
+      friend_left_at: s.friend_left_at,
+      team_size: teamSize,
+      slot_count: slots.length,
+      upcoming_rehearsals: {
+        count: futureReh.length,
+        next_date: futureReh[0] && futureReh[0].date || null,
+      },
+      upcoming_performances: {
+        count: futurePerf.length,
+        next_date: futurePerf[0] && futurePerf[0].date || null,
+      },
+      completed_performances: donePerf, // [{name, city, date}]
+      is_overlap: !!myOverlap,
+    };
+  });
+
+  res.json({ friend, songs });
+});
+
 // 获取好友申请：incoming（待我处理） + outgoing（我发出的待对方处理）
 app.get("/api/friend-requests", authRequired, (req, res) => {
   const incoming = db.prepare(`
