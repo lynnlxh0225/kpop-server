@@ -833,6 +833,36 @@
   <section class="page" id="page-settings">
     <div class="page-header"><h2>设置</h2></div>
     <div class="setting-card">
+      <h3>🎨 皮肤主题</h3>
+      <div class="theme-picker" id="themePicker">
+        <button class="theme-card" data-theme-value="aespa" onclick="selectTheme('aespa')">
+          <div class="theme-preview" style="background: linear-gradient(135deg, #0f0f23 0%, #4c1d95 50%, #06b6d4 100%);">
+            <span>æspa</span>
+          </div>
+          <div class="theme-meta">
+            <b>aespa</b><span>WDA 紫蓝霓虹</span>
+          </div>
+        </button>
+        <button class="theme-card" data-theme-value="blackpink" onclick="selectTheme('blackpink')">
+          <div class="theme-preview" style="background: linear-gradient(135deg, #18181b 0%, #be185d 50%, #ec4899 100%);">
+            <span>BLACKPINK</span>
+          </div>
+          <div class="theme-meta">
+            <b>BLACKPINK</b><span>粉黑摇滚</span>
+          </div>
+        </button>
+        <button class="theme-card" data-theme-value="twice" onclick="selectTheme('twice')">
+          <div class="theme-preview" style="background: linear-gradient(135deg, #fbbf24 0%, #f97316 50%, #ec4899 100%);">
+            <span>TWICE</span>
+          </div>
+          <div class="theme-meta">
+            <b>TWICE</b><span>糖果鲜亮</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="setting-card">
       <h3>邀请码</h3>
       <div class="invite-code-box">
         <code id="myInviteCode">--------</code>
