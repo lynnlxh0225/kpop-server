@@ -1167,7 +1167,21 @@ async function callAI(messages, opts = {}) {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    console.error(`[AI 错误] status=${res.status} body=${text.slice(0, 800)}`);
+    // 同时打印请求摘要，便于排查
+    const reqDump = JSON.stringify({
+      model: body.model,
+      msg_count: actualMessages.length,
+      first_role: actualMessages[0] && actualMessages[0].role,
+      first_content_type: Array.isArray(actualMessages[0] && actualMessages[0].content) ? "array" : "string",
+      first_content_blocks: Array.isArray(actualMessages[0] && actualMessages[0].content)
+        ? actualMessages[0].content.map((c) => c.type)
+        : null,
+      temperature: body.temperature,
+      max_tokens: body.max_tokens,
+      has_response_format: !!body.response_format,
+    });
+    console.error(`[AI 错误] status=${res.status} req=${reqDump}`);
+    console.error(`[AI 错误] body=${text.slice(0, 1500)}`);
     const err = new Error(`AI 服务返回 ${res.status}：${text.slice(0, 400)}`);
     err.statusCode = 502;
     throw err;
