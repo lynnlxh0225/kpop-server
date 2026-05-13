@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>隐私政策 · K-pop 随舞管理器</title>
+<style>
+  body {
+    margin: 0; padding: 24px 18px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: #1f2937; background: #fff;
+    line-height: 1.7; max-width: 720px;
+    margin-left: auto; margin-right: auto;
+  }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  h2 { font-size: 16px; margin: 22px 0 8px; color: #3b82f6; }
+  p, li { font-size: 14px; color: #374151; }
+  .meta { color: #6b7280; font-size: 12px; margin-bottom: 18px; }
+  ul { padding-left: 22px; }
+  a { color: #3b82f6; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; }
+  th { background: #f8fafc; }
+  .back { display:inline-block; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<a class="back" href="/">← 返回</a>
+<h1>隐私政策</h1>
+<div class="meta">最后更新：2026-05-13 · 版本 v1.0</div>
+
+<p>我们非常重视你的隐私。本政策说明本服务会<strong>收集什么</strong>、<strong>怎么用</strong>、<strong>跟谁共享</strong>、<strong>你有哪些权利</strong>。</p>
+
+<h2>1. 我们收集什么</h2>
+<table>
+  <tr><th>类型</th><th>具体内容</th><th>用途</th></tr>
+  <tr><td>账号信息</td><td>邮箱、自设密码（加密存储）、昵称、头像 emoji</td><td>登录鉴权</td></tr>
+  <tr><td>关系数据</td><td>你的好友列表、参与的歌曲、所在的队伍</td><td>实现协作功能</td></tr>
+  <tr><td>内容数据</td><td>你创建的歌曲信息、排练 / 路演安排、你上传的装搭图片、个人备注</td><td>你的主动输入</td></tr>
+  <tr><td>消息整理输入</td><td>你粘贴的微信群聊文字、上传的聊天截图</td><td>仅用于 AI 解析，不长期保存（解析后写入 pending_items，30 天自动清理待确认条目）</td></tr>
+  <tr><td>技术日志</td><td>IP 地址、UA、访问时间</td><td>反垃圾、错误排查（保留 ≤30 天）</td></tr>
+</table>
+
+<p>我们 <strong>不会</strong> 收集：手机号、身份证、住址、支付信息、社交账号关联信息。</p>
+
+<h2>2. 数据怎么用</h2>
+<ul>
+  <li>提供本服务的功能（这是主要用途）。</li>
+  <li>当你使用「整理消息」功能时，你的文本 / 截图会发送给<strong>第三方 AI 服务</strong>进行解析（见下一节）。</li>
+  <li>反垃圾 / 反作弊 / 故障排查。</li>
+  <li><strong>绝不会</strong>用于广告画像、卖给第三方、训练 AI 模型。</li>
+</ul>
+
+<h2>3. 与第三方共享</h2>
+<p>我们仅在以下情况与第三方共享数据：</p>
+<table>
+  <tr><th>第三方</th><th>共享什么</th><th>为什么</th></tr>
+  <tr><td>智谱 AI（BigModel）</td><td>你粘贴的聊天文字、上传的截图、你的歌曲名 / 好友昵称（作为 AI 上下文）</td><td>调用 AI 完成消息识别</td></tr>
+  <tr><td>阿里云（服务器托管）</td><td>所有数据存储在阿里云北京服务器</td><td>基础设施</td></tr>
+</table>
+<p>智谱的隐私政策见：<a href="https://open.bigmodel.cn/privacy" target="_blank">open.bigmodel.cn/privacy</a></p>
+
+<h2>4. 数据保留</h2>
+<ul>
+  <li><strong>账号数据 + 内容数据</strong>：你的账号活跃期间一直保留。</li>
+  <li><strong>账号注销后</strong>：30 天宽限期，过后永久删除（含图片、好友关系、参与的歌曲数据）。<strong>注意</strong>：你是车主的歌曲，注销前请先转让给队员，否则歌曲会一同删除。</li>
+  <li><strong>聊天解析临时数据</strong>：pending_items 队列里 30 天未处理的会被自动清理。</li>
+  <li><strong>技术日志</strong>：≤30 天滚动清理。</li>
+</ul>
+
+<h2>5. 数据安全</h2>
+<ul>
+  <li>密码用 <strong>bcrypt</strong> 加密哈希后存储，开发者也看不到你的明文密码。</li>
+  <li>认证用 JWT token（30 天过期）。</li>
+  <li>数据传输：目前仅 HTTP（备案完成后切换 HTTPS，预计 2-3 周内）。<strong>HTTPS 启用前，请不要在公共 wifi 下使用。</strong></li>
+  <li>服务器每天凌晨 3 点自动备份数据库到本地。</li>
+</ul>
+
+<h2>6. 你的权利</h2>
+<p>你有权：</p>
+<ul>
+  <li><strong>查询</strong>：在「设置 → 数据」导出你所有数据的 JSON 副本。</li>
+  <li><strong>更正</strong>：在 app 内随时改昵称 / 头像 / 邀请码。</li>
+  <li><strong>删除</strong>：发邮件给 <a href="mailto:lynnlxh0225@gmail.com">lynnlxh0225@gmail.com</a> 要求注销账号，3 个工作日内处理。</li>
+  <li><strong>撤回同意</strong>：注销账号即等于撤回对本政策的同意。</li>
+  <li><strong>投诉</strong>：对本政策有异议可邮件联系，或向你所在地网信办投诉。</li>
+</ul>
+
+<h2>7. Cookie 和本地存储</h2>
+<p>本服务使用浏览器 localStorage 保存：JWT 登录 token、皮肤主题选择。不使用第三方 cookie / 跟踪像素 / 数据分析 SDK。</p>
+
+<h2>8. 未成年人</h2>
+<ul>
+  <li>未满 14 周岁不得注册本服务。</li>
+  <li>14-18 周岁需取得监护人同意。</li>
+  <li>如发现未成年人在没有监护人同意下注册，运营方将<strong>立即删除其账号和数据</strong>。</li>
+  <li>家长发现孩子未经同意注册可邮件联系，会优先处理。</li>
+</ul>
+
+<h2>9. 政策更新</h2>
+<p>本政策可能随服务变化更新。重大变更会在 app 内显著提示，且要求你重新同意；细小调整在本页底部更新日期。</p>
+
+<h2>10. 联系我们</h2>
+<p>邮箱：<a href="mailto:lynnlxh0225@gmail.com">lynnlxh0225@gmail.com</a>（本人运营，工作日响应）</p>
+
+<p style="margin-top: 30px; color: #9ca3af; font-size: 12px;">— 完 —</p>
+</body>
+</html>
