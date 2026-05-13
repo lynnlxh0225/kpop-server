@@ -923,13 +923,46 @@ app.post("/api/songs", authRequired, (req, res) => {
     INSERT INTO songs (owner_id, title, artist, type, notes, position_slots, private, claimed, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(ownerId, title.trim(), artist || "", type || "new", notes || "", slotsJson, priv ? 1 : 0, claimed, now());
-  // 车主默认也是成员之一（未填位置），方便后续设置
-  db.prepare(`
-    INSERT INTO song_members (song_id, user_id, position, status, joined_at)
-    VALUES (?, ?, '', 'active', ?)
-  `).run(r.lastInsertRowid, req.userId, now());
-  const song = db.prepare("SELECT * FROM songs WHERE id=?").get(r.lastInsertRowid);
+  const songId = r.lastInsertRowid;
+  // 建歌人始终进 song_members；如指定他人为车主，车主也进 song_members
+  const insertMember = db.prepare(`
+    INSERT INTO song_members (song_id, user_id, position, status, joined_at) VALUES (?, ?, '', 'active', ?)
+    ON CONFLICT(song_id, user_id) DO NOTHING
+  `);
+  insertMember.run(songId, req.userId, now());
+  if (claimed && ownerId !== req.userId) {
+    insertMember.run(songId, ownerId, now());
+  }
+  const song = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
   res.json({ song });
+});
+
+// 认领无主歌曲：active 成员可调
+app.post("/api/songs/:id/claim", authRequired, (req, res) => {
+  const songId = parseInt(req.params.id, 10);
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (s.claimed) return res.status(400).json({ error: "这首歌已经有车主了" });
+  const m = db.prepare("SELECT 1 FROM song_members WHERE song_id=? AND user_id=? AND status='active'").get(songId, req.userId);
+  if (!m) return res.status(403).json({ error: "只有队伍成员能认领车主" });
+  db.prepare("UPDATE songs SET owner_id=?, claimed=1 WHERE id=?").run(req.userId, songId);
+  res.json({ ok: true, owner_id: req.userId });
+});
+
+// 转让车主：现任车主调，目标必须是 active 成员
+app.post("/api/songs/:id/transfer-owner", authRequired, (req, res) => {
+  const songId = parseInt(req.params.id, 10);
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (!s.claimed) return res.status(400).json({ error: "歌曲未认领，请先认领后再转让" });
+  if (s.owner_id !== req.userId) return res.status(403).json({ error: "只有现任车主能转让" });
+  const targetId = parseInt(req.body && req.body.user_id, 10);
+  if (!targetId) return res.status(400).json({ error: "请选转让对象" });
+  if (targetId === req.userId) return res.status(400).json({ error: "不能转给自己" });
+  const m = db.prepare("SELECT 1 FROM song_members WHERE song_id=? AND user_id=? AND status='active'").get(songId, targetId);
+  if (!m) return res.status(400).json({ error: "对方必须是队伍 active 成员" });
+  db.prepare("UPDATE songs SET owner_id=? WHERE id=?").run(targetId, songId);
+  res.json({ ok: true, owner_id: targetId });
 });
 
 // 修改歌曲基本信息（仅车主）
