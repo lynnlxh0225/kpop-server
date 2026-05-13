@@ -41,6 +41,17 @@
       radial-gradient(circle at 8% 95%, rgba(59, 130, 246, 0.06) 0%, transparent 40%);
     background-attachment: fixed;
     min-height: 100vh;
+    /* 移动端：禁用整页弹性回弹（防止顶部下拉刷新页面），但内部容器仍可滚动 */
+    overscroll-behavior-y: contain;
+  }
+  /* 所有可点击元素：去掉 iOS 点击高亮的橙色块，加蓝色波纹 */
+  button, a, [onclick], .picker-chip, .att-chip, .sub-tab-btn, .tab-btn, .chip {
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.18);
+    touch-action: manipulation; /* 消除 300ms 双击延迟 */
+  }
+  /* 桌面端 hover 才生效，手机不要 sticky hover */
+  @media (hover: none) {
+    .btn:hover, .icon-btn:hover, .copy-btn:hover { transform: none !important; }
   }
   a { color: var(--purple); text-decoration: none; cursor: pointer; }
   button { font-family: inherit; cursor: pointer; }
