@@ -920,7 +920,7 @@ app.patch("/api/songs/:id", authRequired, (req, res) => {
   const songId = parseInt(req.params.id, 10);
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
   if (!s) return res.status(404).json({ error: "歌曲不存在" });
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可修改" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可修改" });
   const { title, artist, type, notes, position_slots, private: priv } = req.body || {};
   const slotsJson = position_slots !== undefined
     ? JSON.stringify(sanitizePositionSlots(position_slots))
@@ -943,7 +943,7 @@ app.delete("/api/songs/:id", authRequired, (req, res) => {
   const songId = parseInt(req.params.id, 10);
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
   if (!s) return res.status(404).json({ error: "歌曲不存在" });
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可删除" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可删除" });
   db.prepare("DELETE FROM songs WHERE id=?").run(songId);
   res.json({ ok: true });
 });
@@ -953,7 +953,7 @@ app.post("/api/songs/:id/members", authRequired, (req, res) => {
   const songId = parseInt(req.params.id, 10);
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
   if (!s) return res.status(404).json({ error: "歌曲不存在" });
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可添加成员" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可添加成员" });
   const { user_id, position } = req.body || {};
   const targetId = parseInt(user_id, 10);
   if (!targetId) return res.status(400).json({ error: "参数错误" });
@@ -979,7 +979,7 @@ app.put("/api/songs/:id/members/:uid/position", authRequired, (req, res) => {
   const uid = parseInt(req.params.uid, 10);
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
   if (!s) return res.status(404).json({ error: "歌曲不存在" });
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可修改" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可修改" });
   const { position } = req.body || {};
   const r = db.prepare("UPDATE song_members SET position=? WHERE song_id=? AND user_id=? AND status='active'")
     .run(position || "", songId, uid);
@@ -1031,7 +1031,7 @@ app.delete("/api/rehearsals/:id/attendance/:uid", authRequired, (req, res) => {
   const r = db.prepare("SELECT * FROM rehearsals WHERE id=?").get(id);
   if (!r) return res.status(404).json({ error: "排练不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(r.song_id);
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可操作" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可操作" });
   if (uid === s.owner_id) return res.status(400).json({ error: "不能把车主从自己的排练里踢出" });
   db.prepare("DELETE FROM rehearsal_attendance WHERE rehearsal_id=? AND user_id=?").run(id, uid);
   res.json({ ok: true });
@@ -1044,7 +1044,7 @@ app.delete("/api/performances/:id/attendance/:uid", authRequired, (req, res) => 
   const p = db.prepare("SELECT * FROM performances WHERE id=?").get(id);
   if (!p) return res.status(404).json({ error: "路演不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(p.song_id);
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可操作" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可操作" });
   if (uid === s.owner_id) return res.status(400).json({ error: "不能把车主从自己的路演里踢出" });
   // 同时清掉该人在这场的个人穿搭
   db.prepare("DELETE FROM performance_attendance WHERE performance_id=? AND user_id=?").run(id, uid);
@@ -1062,7 +1062,7 @@ function getSongOrFail(req, res) {
 
 app.post("/api/songs/:sid/rehearsals", authRequired, (req, res) => {
   const s = getSongOrFail(req, res); if (!s) return;
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可添加排练" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可添加排练" });
   const { date, time, location, outfit, notes, attendance } = req.body || {};
   if (!date) return res.status(400).json({ error: "请填写日期" });
   const r = db.prepare(`
@@ -1078,7 +1078,7 @@ app.patch("/api/rehearsals/:id", authRequired, (req, res) => {
   const r = db.prepare("SELECT * FROM rehearsals WHERE id=?").get(id);
   if (!r) return res.status(404).json({ error: "排练不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(r.song_id);
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可修改" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可修改" });
   const { date, time, location, outfit, notes, attendance } = req.body || {};
   db.prepare("UPDATE rehearsals SET date=?, time=?, location=?, outfit=?, notes=? WHERE id=?").run(
     date !== undefined ? date : r.date,
@@ -1097,7 +1097,7 @@ app.delete("/api/rehearsals/:id", authRequired, (req, res) => {
   const r = db.prepare("SELECT * FROM rehearsals WHERE id=?").get(id);
   if (!r) return res.status(404).json({ error: "排练不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(r.song_id);
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可删除" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可删除" });
   db.prepare("DELETE FROM rehearsals WHERE id=?").run(id);
   res.json({ ok: true });
 });
@@ -1143,7 +1143,7 @@ function sanitizeImagesArr(arr) {
 
 app.post("/api/songs/:sid/performances", authRequired, (req, res) => {
   const s = getSongOrFail(req, res); if (!s) return;
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可添加路演" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可添加路演" });
   const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: "请填写活动名" });
   if (!date) return res.status(400).json({ error: "请填写日期" });
@@ -1161,7 +1161,7 @@ app.patch("/api/performances/:id", authRequired, (req, res) => {
   const p = db.prepare("SELECT * FROM performances WHERE id=?").get(id);
   if (!p) return res.status(404).json({ error: "路演不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(p.song_id);
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可修改" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可修改" });
   const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance } = req.body || {};
   const imgs = outfit_images !== undefined ? JSON.stringify(sanitizeImagesArr(outfit_images)) : p.outfit_images;
   db.prepare(`UPDATE performances SET name=?, city=?, date=?, time=?, location=?, outfit=?, outfit_images=?, status=?, notes=? WHERE id=?`).run(
@@ -1185,7 +1185,7 @@ app.delete("/api/performances/:id", authRequired, (req, res) => {
   const p = db.prepare("SELECT * FROM performances WHERE id=?").get(id);
   if (!p) return res.status(404).json({ error: "路演不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(p.song_id);
-  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可删除" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可删除" });
   db.prepare("DELETE FROM performances WHERE id=?").run(id);
   res.json({ ok: true });
 });
