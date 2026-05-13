@@ -1083,6 +1083,22 @@
   </div>
 </div>
 
+<!-- 转让车主 -->
+<div class="modal-bg" id="transferOwnerModal">
+  <div class="modal">
+    <h3>🔄 转让车主</h3>
+    <p style="font-size:13px;color:var(--text-soft);">选一个 active 成员当新车主。转让后你变成普通成员，权限交给对方。</p>
+    <div>
+      <label class="field">选择新车主</label>
+      <div class="friend-picker" id="transferOwnerPicker"></div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('transferOwnerModal')">取消</button>
+      <button class="btn" onclick="confirmTransferOwner()">确认转让</button>
+    </div>
+  </div>
+</div>
+
 <!-- 编辑成员位置（车主用） -->
 <div class="modal-bg" id="editPositionsModal">
   <div class="modal">
