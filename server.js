@@ -51,6 +51,7 @@ db.exec(`
     name TEXT NOT NULL,
     avatar TEXT DEFAULT '👤',
     invite_code TEXT UNIQUE NOT NULL,
+    calendar_token TEXT,
     created_at INTEGER NOT NULL
   );
 
