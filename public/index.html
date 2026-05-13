@@ -1937,16 +1937,28 @@
       return active.find(m => (m.position || "").toLowerCase().trim() === k);
     }
 
-    const slotsHtml = slots.length ? `
+    // 谁能管理位置：claimed 状态下是车主，unclaimed 状态下是任意 active 成员
+    const isActiveMember = active.some(t => t.user_id === state.user.id);
+    const canManage = isOwner || (!s.claimed && isActiveMember);
+
+    const slotsHtml = (slots.length || canManage) ? `
       <div style="display:flex;flex-direction:column;gap:6px;">
-        ${slots.map((name) => {
+        ${slots.map((name, idx) => {
           const m = findMemberBySlot(name);
           if (m) slotMatched.add(m.user_id);
           const meId = state.user.id;
-          const canKick = isOwner && m && m.user_id !== s.owner_id;
+          const canKick = canManage && m && m.user_id !== s.owner_id;
           return `
             <div class="slot-row">
-              <div class="slot-name">${escapeHtml(name)}</div>
+              ${canManage ? `
+                <input class="slot-name-input" value="${escapeAttr(name)}" data-idx="${idx}"
+                       onblur="onSlotRename(${idx}, this)"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                       title="点击改位置名" />
+                <button class="slot-del-btn" onclick="onSlotDelete(${idx})" title="删除这个位置">×</button>
+              ` : `
+                <div class="slot-name">${escapeHtml(name)}</div>
+              `}
               ${m ? `
                 <div class="slot-assigned">
                   <span style="font-size:18px;">${m.avatar || '👤'}</span>
@@ -1955,10 +1967,17 @@
                 </div>
               ` : `
                 <div class="slot-empty">未分配</div>
-                ${isOwner ? `<button class="btn small" onclick="openAddMemberModal('${escapeAttr(name)}')">+ 选好友</button>` : ''}
+                ${canManage ? `<button class="btn small" onclick="openAddMemberModal('${escapeAttr(name)}')">+ 选好友</button>` : ''}
               `}
             </div>`;
         }).join("")}
+        ${canManage ? `
+          <div class="slot-row add">
+            <input id="newInlineSlot" placeholder="加位置（少人版 / 伴舞 ...）" style="flex:1;background:transparent;border:none;"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();onInlineAddSlot();}" />
+            <button class="btn small ghost" onclick="onInlineAddSlot()">+ 加</button>
+          </div>
+        ` : ''}
       </div>
     ` : '';
 
