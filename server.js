@@ -1121,6 +1121,13 @@ async function callAI(messages, opts = {}) {
   if (opts.jsonMode !== false) {
     body.response_format = { type: "json_object" };
   }
+  // 调用前打印请求摘要（不打印图片 base64，太长）
+  const imgCount = messages.reduce((acc, m) => {
+    if (Array.isArray(m.content)) return acc + m.content.filter((c) => c.type === "image_url").length;
+    return acc;
+  }, 0);
+  console.log(`[AI 调用] model=${body.model} url=${AI_BASE_URL} jsonMode=${opts.jsonMode !== false} msgs=${messages.length} imgs=${imgCount}`);
+
   let res;
   try {
     res = await fetch(`${AI_BASE_URL}/chat/completions`, {
@@ -1136,13 +1143,17 @@ async function callAI(messages, opts = {}) {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    const err = new Error(`AI 服务返回 ${res.status}：${text.slice(0, 200)}`);
+    console.error(`[AI 错误] status=${res.status} body=${text.slice(0, 800)}`);
+    const err = new Error(`AI 服务返回 ${res.status}：${text.slice(0, 400)}`);
     err.statusCode = 502;
     throw err;
   }
   const data = await res.json();
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  if (!content) throw new Error("AI 返回内容为空");
+  if (!content) {
+    console.error("[AI 错误] 返回结构异常:", JSON.stringify(data).slice(0, 500));
+    throw new Error("AI 返回内容为空");
+  }
   return content;
 }
 
