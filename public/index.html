@@ -1712,6 +1712,7 @@
       type: document.getElementById("songType").value,
       notes: document.getElementById("songNotes").value.trim(),
       position_slots: songSlotsDraft.slice(),
+      private: document.getElementById("songPrivate").checked ? 1 : 0,
     };
     try {
       if (editingSongId) await API.patch(`/songs/${editingSongId}`, body);
