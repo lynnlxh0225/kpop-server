@@ -260,12 +260,30 @@
     display: inline-flex; align-items: center; gap: 4px;
   }
   .detail-header {
-    background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+    position: relative; overflow: hidden;
+    background:
+      linear-gradient(135deg, var(--primary-soft) 0%, var(--accent-soft) 100%);
     border-radius: 16px; padding: 18px 20px;
     box-shadow: var(--shadow); margin-bottom: 14px;
+    border: 1px solid var(--border);
   }
-  .detail-header h2 { margin: 0 0 4px; font-size: 22px; }
-  .detail-header .meta { font-size: 14px; color: var(--text-soft); }
+  /* 顶部一条主题色镜面高光 */
+  .detail-header::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--chroma-a), var(--chroma-b), var(--chroma-c));
+    opacity: 0.9;
+  }
+  /* 右上角对角线条几何装饰 */
+  .detail-header::after {
+    content: ''; position: absolute; top: -40px; right: -40px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle, var(--mirror-hi) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .detail-header h2 { margin: 0 0 4px; font-size: 22px; position: relative; z-index: 1; letter-spacing: 0.3px; }
+  .detail-header .meta { font-size: 14px; color: var(--text-soft); position: relative; z-index: 1; }
+  .detail-header .role-banner,
+  .detail-header > div { position: relative; z-index: 1; }
   .role-banner {
     margin-top: 10px; padding: 8px 12px;
     border-radius: 10px; font-size: 12px; font-weight: 600;
