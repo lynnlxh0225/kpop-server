@@ -1111,10 +1111,27 @@ async function callAI(messages, opts = {}) {
     err.statusCode = 503;
     throw err;
   }
+  // 智谱 GLM-4V 系列不支持 system 角色：把 system 文本合并到第一条 user 消息里
+  let actualMessages = messages;
+  if (opts.mergeSystemIntoUser) {
+    const sysTexts = messages.filter((m) => m.role === "system").map((m) => typeof m.content === "string" ? m.content : "").filter(Boolean);
+    const userMsgs = messages.filter((m) => m.role !== "system");
+    if (sysTexts.length && userMsgs.length) {
+      const sysJoined = sysTexts.join("\n\n");
+      const first = userMsgs[0];
+      if (typeof first.content === "string") {
+        first.content = sysJoined + "\n\n" + first.content;
+      } else if (Array.isArray(first.content)) {
+        // 多模态：把 system 文本塞进第一个 text 节点之前
+        first.content = [{ type: "text", text: sysJoined }, ...first.content];
+      }
+      actualMessages = userMsgs;
+    }
+  }
   const body = {
     model: opts.model || AI_MODEL,
-    messages,
-    temperature: 0.1,
+    messages: actualMessages,
+    temperature: opts.temperature != null ? opts.temperature : 0.1,
     max_tokens: opts.maxTokens || 4000,
   };
   // 视觉模型多数不支持 response_format，所以做开关
