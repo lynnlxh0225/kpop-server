@@ -422,6 +422,43 @@
     font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;
   }
 
+  /* ============ 位置占位 chips ============ */
+  .slot-chips {
+    display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px;
+  }
+  .slot-chips:empty::after {
+    content: '还没有位置，可以从下面手动添加';
+    font-size: 12px; color: var(--text-soft);
+  }
+  .slot-chip {
+    background: var(--primary-soft); color: var(--primary-deep);
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .slot-chip .x {
+    cursor: pointer; opacity: 0.7; font-weight: 700; padding: 0 2px;
+  }
+  .slot-chip .x:hover { opacity: 1; color: var(--danger); }
+  .slot-chip.assigned {
+    background: linear-gradient(135deg, var(--primary-soft), var(--accent-soft));
+  }
+  .slot-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: var(--bg); border-radius: 10px; margin-bottom: 6px;
+  }
+  .slot-row .slot-name {
+    min-width: 90px; font-weight: 600; font-size: 13px; color: var(--text);
+  }
+  .slot-row .slot-assigned {
+    flex: 1; display: flex; align-items: center; gap: 6px;
+    font-size: 13px;
+  }
+  .slot-row .slot-empty {
+    flex: 1; font-size: 12px; color: var(--text-soft); font-style: italic;
+  }
+  .slot-row button { white-space: nowrap; }
+
   /* ============ 皮肤选择器 ============ */
   .theme-picker {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
