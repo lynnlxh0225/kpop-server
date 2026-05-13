@@ -1228,6 +1228,83 @@
   document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
 
   // ===================== 歌曲列表 =====================
+  // ===================== Hero + 近期安排轮播 =====================
+  function renderHero() {
+    if (!state.user) return;
+    const nameEl = document.getElementById("heroName");
+    if (nameEl) nameEl.textContent = state.user.name;
+
+    const visibleSongs = state.songs.filter((s) => s.my_role !== 'left');
+    const friendsCount = state.friends.length;
+
+    // 近期 = 7 天内排练 + 14 天内路演（我出席不是 no/不参 的）
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const in7 = new Date(now); in7.setDate(in7.getDate() + 7);
+    const in14 = new Date(now); in14.setDate(in14.getDate() + 14);
+    const limit7 = in7.toISOString().slice(0, 10);
+    const limit14 = in14.toISOString().slice(0, 10);
+
+    const upcoming = [];
+    for (const s of visibleSongs) {
+      for (const r of (s.rehearsals || [])) {
+        if (!r.date || r.date < today || r.date > limit7) continue;
+        const my = (r.attendance || []).find((a) => a.user_id === state.user.id);
+        if (my && my.status === 'no') continue;
+        upcoming.push({ kind: 'rehearsal', song: s, date: r.date, time: r.time, location: r.location, ref: r });
+      }
+      for (const p of (s.performances || [])) {
+        if (!p.date || p.date < today || p.date > limit14) continue;
+        if (p.status === 'no_show') continue;
+        const my = (p.attendance || []).find((a) => a.user_id === state.user.id);
+        if (my && my.status === 'no') continue;
+        upcoming.push({ kind: 'performance', song: s, date: p.date, time: p.time, location: p.location, name: p.name, ref: p });
+      }
+    }
+    upcoming.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+
+    document.getElementById("heroSongs").textContent = visibleSongs.length;
+    document.getElementById("heroFriends").textContent = friendsCount;
+    document.getElementById("heroUpcoming").textContent = upcoming.length;
+
+    renderQuickBanner(upcoming);
+  }
+
+  function renderQuickBanner(items) {
+    const box = document.getElementById("quickBanner");
+    if (!box) return;
+    if (!items.length) {
+      box.innerHTML = `
+        <div class="qb-empty">
+          <span>✨</span>
+          <span>近期没有排练或路演，去歌曲里添加一个吧～</span>
+        </div>`;
+      return;
+    }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    box.innerHTML = items.slice(0, 10).map((it) => {
+      const diff = dayDiff(todayStr, it.date);
+      const whenLabel = diff === 0 ? '今天' : diff === 1 ? '明天' : diff === 2 ? '后天' : `${diff} 天后`;
+      const urgent = diff <= 1 ? 'urgent' : '';
+      const kindLabel = it.kind === 'rehearsal' ? '📅 排练' : '🎤 路演';
+      const title = it.kind === 'rehearsal' ? `${it.song.title}` : (it.name || it.song.title);
+      const meta = [it.date, it.time, it.location].filter(Boolean).join(' · ');
+      return `
+        <div class="qb-card" onclick="openSongDetail(${it.song.id})">
+          <span class="qb-kind ${it.kind === 'rehearsal' ? 'reh' : 'perf'}">${kindLabel}</span>
+          <div class="qb-title">${escapeHtml(title)}</div>
+          <div class="qb-when ${urgent}">${whenLabel} · ${escapeHtml(it.time || '时间待定')}</div>
+          <div class="qb-meta">${escapeHtml(meta)}</div>
+        </div>`;
+    }).join("");
+  }
+
+  function dayDiff(fromIso, toIso) {
+    const a = new Date(fromIso + "T00:00:00");
+    const b = new Date(toIso + "T00:00:00");
+    return Math.round((b - a) / 86400000);
+  }
+
   function renderSongs() {
     const list = document.getElementById("songList");
     if (!state.songs.length) {
