@@ -1929,25 +1929,66 @@
     } catch (e) { toast(e.message, true); }
   }
 
-  // 编辑队伍位置（车主用）
+  // 编辑队伍（车主用）：同时管位置列表 + 已有成员位置
+  let editSlotsDraft = [];
   function openEditPositionsModal() {
     const s = findSong(currentSongId); if (!s) return;
-    if (s.my_role !== 'owner') return toast("只有车主能编辑位置", true);
+    if (s.my_role !== 'owner') return toast("只有车主能编辑队伍", true);
+    editSlotsDraft = (Array.isArray(s.position_slots) ? s.position_slots : []).slice();
+    renderEditSlotsBox();
+    document.getElementById("editNewSlotInput").value = "";
+
     const active = (s.team || []).filter(t => t.status === 'active');
-    if (!active.length) return toast("队伍里还没有成员", true);
     const box = document.getElementById("editPositionsList");
-    box.innerHTML = active.map(t => `
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-        <span class="avatar" style="font-size:20px;">${t.avatar || '👤'}</span>
-        <div style="min-width:80px;font-weight:600;">${escapeHtml(t.name)}${t.user_id === s.owner_id ? ' <span style="color:var(--pink);font-size:11px;">车主</span>' : ''}</div>
-        <input data-uid="${t.user_id}" data-original="${escapeHtml(t.position || '')}"
-               value="${escapeHtml(t.position || '')}" placeholder="例如：Karina (Center)" style="flex:1;" />
-      </div>
-    `).join("");
+    const label = document.getElementById("editMemberPosLabel");
+    if (!active.length) {
+      label.style.display = 'none';
+      box.innerHTML = '';
+    } else {
+      label.style.display = '';
+      box.innerHTML = active.map(t => `
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+          <span class="avatar" style="font-size:20px;">${t.avatar || '👤'}</span>
+          <div style="min-width:80px;font-weight:600;">${escapeHtml(t.name)}${t.user_id === s.owner_id ? ' <span style="color:var(--primary);font-size:11px;">车主</span>' : ''}</div>
+          <input data-uid="${t.user_id}" data-original="${escapeHtml(t.position || '')}"
+                 value="${escapeHtml(t.position || '')}" placeholder="位置 / 担当" style="flex:1;" />
+        </div>
+      `).join("");
+    }
     openModal("editPositionsModal");
   }
 
+  function renderEditSlotsBox() {
+    const box = document.getElementById("editSlotsBox");
+    if (!box) return;
+    box.innerHTML = editSlotsDraft.map((name, i) => `
+      <span class="slot-chip">
+        ${escapeHtml(name)}
+        <span class="x" onclick="editSlotsDraft.splice(${i},1);renderEditSlotsBox();">×</span>
+      </span>`).join("");
+  }
+  function addEditSlot() {
+    const inp = document.getElementById("editNewSlotInput");
+    const v = (inp.value || "").trim();
+    if (!v) return;
+    if (editSlotsDraft.length >= 30) return toast("位置数量上限", true);
+    if (editSlotsDraft.find(x => x.toLowerCase() === v.toLowerCase())) {
+      inp.value = "";
+      return toast("已存在同名位置", true);
+    }
+    editSlotsDraft.push(v);
+    inp.value = "";
+    renderEditSlotsBox();
+  }
+
   async function saveAllPositions() {
+    const s = findSong(currentSongId);
+    // 算 slot 列表是否变化
+    const oldSlots = Array.isArray(s.position_slots) ? s.position_slots : [];
+    const slotsChanged = oldSlots.length !== editSlotsDraft.length ||
+      oldSlots.some((v, i) => v !== editSlotsDraft[i]);
+
+    // 算成员位置变化
     const inputs = document.querySelectorAll("#editPositionsList input[data-uid]");
     const changes = [];
     inputs.forEach(inp => {
@@ -1955,7 +1996,8 @@
       const next = inp.value.trim();
       if (next !== original) changes.push({ uid: parseInt(inp.dataset.uid, 10), position: next });
     });
-    if (!changes.length) {
+
+    if (!slotsChanged && !changes.length) {
       closeModal("editPositionsModal");
       toast("没有改动");
       return;
