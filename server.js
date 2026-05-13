@@ -1745,6 +1745,7 @@ app.post("/api/parse-images", authRequired, parseImgLimiter, async (req, res) =>
 
   let raw;
   try {
+    consumeQuota(req.userId, "parse_images");
     raw = await callAI(messages, {
       model: AI_VISION_MODEL,
       jsonMode: false,
