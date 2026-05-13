@@ -605,6 +605,19 @@
       <button class="btn danger small" onclick="logout()" style="margin-left:8px;">退出登录</button>
     </div>
     <div class="setting-card">
+      <h3>📆 排练日历订阅</h3>
+      <p>把下面的链接粘到 iPhone「日历 → 添加日历 → 添加订阅日历」（Android 用 Google Calendar 网页端「设置 → 添加日历 → 通过网址」），所有排练 / 路演会自动出现在系统日历里，前一天会自动提醒。</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <input id="calendarUrlInput" readonly placeholder="加载中…" style="flex:1;min-width:240px;font-family:Monaco,monospace;font-size:12px;" />
+        <button class="copy-btn" onclick="copyCalendarUrl()">复制链接</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <a id="calendarOneTapLink" class="btn small" style="display:none;" href="#">📱 一键添加到 iPhone</a>
+        <button class="btn ghost small" onclick="regenerateCalendarToken()">🔄 重置订阅链接（旧链接立即失效）</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-soft);margin-top:8px;">💡 隐私提示：链接里带的 token 等同于「只读你日程」的钥匙；不要发到群里、不要泄漏。被泄漏立即点上面重置。</p>
+    </div>
+    <div class="setting-card">
       <h3>数据导出</h3>
       <p>导出我能看到的所有歌曲数据 JSON 备份。</p>
       <button class="btn ghost" onclick="exportData()">⬇ 导出 JSON</button>
