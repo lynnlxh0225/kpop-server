@@ -1009,6 +1009,21 @@ app.put("/api/rehearsals/:id/my-attendance", authRequired, (req, res) => {
 });
 
 // ==================== 路演 ====================
+function sanitizePositionSlots(arr) {
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set();
+  return arr
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter((s) => {
+      if (!s || s.length > 40) return false;
+      const k = s.toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .slice(0, 30);
+}
+
 function sanitizeImagesArr(arr) {
   if (!Array.isArray(arr)) return [];
   // 只保留我们自己 /uploads/ 下的 URL，防止存外部链接被滥用
