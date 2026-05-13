@@ -82,10 +82,14 @@
     margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
-    /* 极淡的几何背景：右上 + 左下两个柔焦圆点 */
+    /* 极淡的几何背景：柔焦圆点 + 网格线 + 对角线（前卫感） */
     background-image:
-      radial-gradient(circle at 92% 8%, var(--bg-glow-a) 0%, transparent 35%),
-      radial-gradient(circle at 8% 95%, var(--bg-glow-b) 0%, transparent 40%);
+      radial-gradient(circle at 92% 8%, var(--bg-glow-a) 0%, transparent 38%),
+      radial-gradient(circle at 8% 95%, var(--bg-glow-b) 0%, transparent 42%),
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 56px 56px, 56px 56px;
+    background-position: 0 0, 0 0, 0 0, 0 0;
     background-attachment: fixed;
     min-height: 100vh;
     /* 移动端：禁用整页弹性回弹（防止顶部下拉刷新页面），但内部容器仍可滚动 */
