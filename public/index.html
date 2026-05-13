@@ -1607,15 +1607,17 @@
 <!-- 屏外渲染容器：用来给 html2canvas 截图，position fixed 在屏幕外 -->
 <div id="shareCardOffscreen" style="position:fixed;left:-10000px;top:0;pointer-events:none;z-index:-1;"></div>
 
-<!-- 新手引导 -->
-<div class="onboard-bg" id="onboardModal" style="display:none;">
-  <div class="onboard-card">
-    <div class="onboard-progress" id="onboardProgress"></div>
-    <div class="onboard-body" id="onboardBody"></div>
-    <div class="onboard-actions">
-      <button class="onboard-skip" onclick="skipOnboard()">跳过</button>
-      <button class="onboard-prev" onclick="prevOnboardStep()" id="onboardPrev" style="display:none;">上一步</button>
-      <button class="onboard-next" onclick="nextOnboardStep()" id="onboardNext">下一步</button>
+<!-- 新手引导：spotlight tour -->
+<div id="tourOverlay" style="display:none;">
+  <div id="tourHole"></div>
+  <div id="tourTooltip">
+    <div class="tt-progress" id="ttProgress"></div>
+    <div class="tt-body" id="ttBody"></div>
+    <div class="tt-actions">
+      <button class="tt-skip" onclick="endTour()">跳过</button>
+      <div style="flex:1;"></div>
+      <button class="tt-prev" id="ttPrev" onclick="prevTourStep()">上一步</button>
+      <button class="tt-next" id="ttNext" onclick="nextTourStep()">下一步 →</button>
     </div>
   </div>
 </div>
