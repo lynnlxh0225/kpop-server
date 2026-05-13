@@ -2057,6 +2057,58 @@
       toast("已添加");
     } catch (e) { toast(e.message, true); }
   }
+  // 内联编辑位置（slot 数组）：失焦改名 / 删除 / 加位置
+  async function patchSlots(newSlots) {
+    await API.patch(`/songs/${currentSongId}`, { position_slots: newSlots });
+    await loadSongs();
+    renderTeam();
+  }
+  async function onSlotRename(idx, inputEl) {
+    const s = findSong(currentSongId); if (!s) return;
+    const slots = (s.position_slots || []).slice();
+    const original = slots[idx] || '';
+    const next = (inputEl.value || '').trim();
+    if (next === original) return;
+    if (!next) {
+      inputEl.value = original;
+      return toast("位置名不能为空", true);
+    }
+    // 同名检测（忽略当前自己）
+    if (slots.some((x, i) => i !== idx && x.toLowerCase() === next.toLowerCase())) {
+      inputEl.value = original;
+      return toast("已存在同名位置", true);
+    }
+    slots[idx] = next;
+    try { await patchSlots(slots); toast("已更新位置名"); }
+    catch (e) { toast(e.message, true); inputEl.value = original; }
+  }
+  async function onSlotDelete(idx) {
+    const s = findSong(currentSongId); if (!s) return;
+    const slots = (s.position_slots || []).slice();
+    const removed = slots[idx];
+    if (!removed) return;
+    if (!confirm(`删除位置「${removed}」？`)) return;
+    slots.splice(idx, 1);
+    try { await patchSlots(slots); toast("已删除位置"); }
+    catch (e) { toast(e.message, true); }
+  }
+  async function onInlineAddSlot() {
+    const inp = document.getElementById("newInlineSlot");
+    if (!inp) return;
+    const v = (inp.value || '').trim();
+    if (!v) return;
+    const s = findSong(currentSongId); if (!s) return;
+    const slots = (s.position_slots || []).slice();
+    if (slots.some(x => x.toLowerCase() === v.toLowerCase())) {
+      inp.value = "";
+      return toast("已存在同名位置", true);
+    }
+    slots.push(v);
+    inp.value = "";
+    try { await patchSlots(slots); toast(`已加位置「${v}」`); }
+    catch (e) { toast(e.message, true); }
+  }
+
   async function removeSongMember(uid) {
     if (!confirm("把 TA 从这首歌的队伍里移除？\n\n⚠️ TA 在这首歌「所有排练 + 路演」的出席和个人穿搭也会一并清掉。\n如果只是某次活动不来，请在那次排练/路演的小标签上点 × 单独移除。")) return;
     try {
