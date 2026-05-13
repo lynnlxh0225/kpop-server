@@ -1925,6 +1925,114 @@
     loadRegistrationStatus();
   }
 
+  // ===================== 新手引导 =====================
+  const ONBOARD_VERSION = "v1";
+  const ONBOARD_STEPS = [
+    {
+      emoji: "👋",
+      title: "嗨，欢迎来到随舞圈",
+      desc: "这是一个 K-pop 翻跳的<b>协作管理工具</b>：管歌曲、约排练、报路演、AI 整理消息、一键发分享图。",
+      tag: "30 秒了解 6 个核心功能",
+    },
+    {
+      emoji: "👯",
+      title: "先加好友",
+      desc: "翻跳是协作。去顶部 <b>「👯 好友」</b> tab，把朋友的邀请码加进来（或者发你的邀请码 / 邀请链接给 ta）。所有功能都基于好友关系。",
+      tag: "你的邀请码在「设置」",
+    },
+    {
+      emoji: "🎵",
+      title: "建第一首歌，AI 自动认成员",
+      desc: "「🎵 歌曲 → + 新建歌曲」。输入歌名和 <b>aespa / TWICE / BLACKPINK</b> 等组合名，AI 会自动识别 4-9 人位置，你只需把好友拉到对应位置。",
+      tag: "已支持 20+ 主流女团",
+    },
+    {
+      emoji: "📅",
+      title: "排练 / 路演",
+      desc: "歌曲详情里能记 <b>排练日期地点、路演投稿状态、装搭参考图</b>，每个队员都能改自己的出席状态。再也不用一个个 @ 问。",
+      tag: "车主可转让 · 也能临时认领",
+    },
+    {
+      emoji: "📥",
+      title: "AI 整理群消息",
+      desc: "群里讨论了排练时间？打开 <b>「📥 整理消息」</b>，<b>截图上传</b>（推荐）或粘文字，AI 自动识别日期 / 地点 / 谁来。最后你审核入库。",
+      tag: "比手动录入快 10×",
+    },
+    {
+      emoji: "📆",
+      title: "塞进手机日历",
+      desc: "「⚙️ 设置 → 日历订阅」复制链接到 <b>iPhone 日历</b>，所有排练 / 路演自动同步，前一天 push 提醒。再忙也不会忘场。",
+      tag: "iOS / Android / Mac 全通",
+    },
+  ];
+
+  let _onboardStep = 0;
+
+  function maybeShowOnboarding() {
+    try {
+      const seen = localStorage.getItem("kpop_onboard");
+      if (seen === ONBOARD_VERSION) return;
+    } catch {}
+    showOnboarding(0);
+  }
+
+  function showOnboarding(stepIdx) {
+    _onboardStep = stepIdx || 0;
+    const modal = document.getElementById("onboardModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    renderOnboardingStep();
+  }
+
+  function renderOnboardingStep() {
+    const step = ONBOARD_STEPS[_onboardStep];
+    const total = ONBOARD_STEPS.length;
+    const body = document.getElementById("onboardBody");
+    const prog = document.getElementById("onboardProgress");
+    const nextBtn = document.getElementById("onboardNext");
+    const prevBtn = document.getElementById("onboardPrev");
+    if (!step || !body || !prog) return;
+    body.innerHTML = `
+      <div class="onb-emoji">${step.emoji}</div>
+      <div class="onb-title">${step.title}</div>
+      <div class="onb-desc">${step.desc}</div>
+      ${step.tag ? `<div class="onb-tag">${escapeHtml(step.tag)}</div>` : ''}
+    `;
+    prog.innerHTML = ONBOARD_STEPS.map((_, i) => {
+      let cls = 'dot';
+      if (i === _onboardStep) cls += ' active';
+      else if (i < _onboardStep) cls += ' done';
+      return `<span class="${cls}"></span>`;
+    }).join('');
+    nextBtn.textContent = _onboardStep === total - 1 ? "开始使用 →" : "下一步";
+    prevBtn.style.display = _onboardStep === 0 ? "none" : "";
+  }
+
+  function nextOnboardStep() {
+    if (_onboardStep === ONBOARD_STEPS.length - 1) {
+      finishOnboarding();
+    } else {
+      _onboardStep++;
+      renderOnboardingStep();
+    }
+  }
+  function prevOnboardStep() {
+    if (_onboardStep > 0) {
+      _onboardStep--;
+      renderOnboardingStep();
+    }
+  }
+  function skipOnboard() { finishOnboarding(); }
+  function finishOnboarding() {
+    try { localStorage.setItem("kpop_onboard", ONBOARD_VERSION); } catch {}
+    document.getElementById("onboardModal").style.display = "none";
+  }
+  // 从设置里"重看"：清掉标记重新触发
+  function resetAndShowOnboarding() {
+    try { localStorage.removeItem("kpop_onboard"); } catch {}
+    showOnboarding(0);
+  }
+
   // 拉取剩余名额状态，渲染 banner，并按需禁用注册按钮
   async function loadRegistrationStatus() {
     const banner = document.getElementById("seats-banner");
