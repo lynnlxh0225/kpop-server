@@ -1652,6 +1652,21 @@
     document.getElementById("songType").value = s.type || "new";
     document.getElementById("songNotes").value = s.notes || "";
     document.getElementById("songPrivate").checked = !!s.private;
+    // 车主下拉：只在新建模式显示（编辑模式去歌曲详情里转让）
+    const ownerRow = document.getElementById("songOwnerRow");
+    const ownerSel = document.getElementById("songOwner");
+    if (id) {
+      ownerRow.style.display = "none";
+    } else {
+      ownerRow.style.display = "";
+      const opts = [
+        '<option value="self">🚗 我自己来当</option>',
+        ...state.friends.map(f => `<option value="friend:${f.id}">👯 让 ${escapeHtml(f.name)} 当</option>`),
+        '<option value="unclaimed">🙋 暂无车主（让队员认领）</option>',
+      ];
+      ownerSel.innerHTML = opts.join("");
+      ownerSel.value = "self";
+    }
     songSlotsDraft = Array.isArray(s.position_slots) ? s.position_slots.slice() : [];
     document.getElementById("newSlotInput").value = "";
     // 新建模式下，把 artist 当前值再自动识别一次
