@@ -475,7 +475,9 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 // 兜底：本地开发没有 nginx 时让 Node 也能出图
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge: "7d" }));
 
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic"]);
+const ALLOWED_MIME = new Set([
+  "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif",
+]);
 const uploader = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOAD_DIR),
@@ -486,10 +488,10 @@ const uploader = multer({
       cb(null, `u${req.userId || "x"}-${stamp}-${rand}${ext.length > 1 ? ext : ".jpg"}`);
     },
   }),
-  limits: { fileSize: 10 * 1024 * 1024, files: 8 },
+  limits: { fileSize: 20 * 1024 * 1024, files: 12 },  // 单文件 20MB，单次最多 12 张
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_MIME.has(file.mimetype)) {
-      return cb(new Error("只接受 jpg/png/webp/gif/heic 图片"));
+      return cb(new Error(`不支持的图片格式：${file.mimetype}（接受 jpg/png/webp/gif/heic）`));
     }
     cb(null, true);
   },
