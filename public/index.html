@@ -1797,12 +1797,13 @@
     const files = Array.from(input.files || []);
     if (!files.length) return;
     input.value = ""; // 允许重新选同一张
+    toast(`📤 正在压缩并上传 ${files.length} 张图…`);
     try {
       const urls = await uploadFiles(files);
       perfDraftImages = perfDraftImages.concat(urls).slice(0, 24);
       renderPerfImagesBox();
-      toast(`已上传 ${urls.length} 张`);
-    } catch (e) { toast(e.message, true); }
+      toast(`✅ 已上传 ${urls.length} 张`);
+    } catch (e) { toast("上传失败：" + e.message, true); }
   }
 
   function openLightbox(url) {
