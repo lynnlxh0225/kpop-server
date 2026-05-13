@@ -1139,11 +1139,12 @@ async function callAI(messages, opts = {}) {
     body.response_format = { type: "json_object" };
   }
   // 调用前打印请求摘要（不打印图片 base64，太长）
-  const imgCount = messages.reduce((acc, m) => {
+  const imgCount = actualMessages.reduce((acc, m) => {
     if (Array.isArray(m.content)) return acc + m.content.filter((c) => c.type === "image_url").length;
     return acc;
   }, 0);
-  console.log(`[AI 调用] model=${body.model} url=${AI_BASE_URL} jsonMode=${opts.jsonMode !== false} msgs=${messages.length} imgs=${imgCount}`);
+  const rolesStr = actualMessages.map((m) => m.role).join(",");
+  console.log(`[AI 调用] model=${body.model} url=${AI_BASE_URL} jsonMode=${opts.jsonMode !== false} msgs=${actualMessages.length} imgs=${imgCount} roles=[${rolesStr}] temp=${body.temperature}`);
 
   let res;
   try {
