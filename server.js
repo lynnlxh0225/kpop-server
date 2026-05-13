@@ -237,6 +237,195 @@ function fullUser(u) {
 }
 function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || ""); }
 
+// ===== 日历订阅相关 =====
+function genCalendarToken() {
+  // 32 字节 → 43 字符 base64url，URL-safe
+  return crypto.randomBytes(32).toString("base64url");
+}
+function getOrCreateCalToken(userId) {
+  const u = db.prepare("SELECT calendar_token FROM users WHERE id=?").get(userId);
+  if (u && u.calendar_token) return u.calendar_token;
+  const tok = genCalendarToken();
+  db.prepare("UPDATE users SET calendar_token=? WHERE id=?").run(tok, userId);
+  return tok;
+}
+// ics 文本字段转义：反斜杠 / 分号 / 逗号 / 换行
+function escapeIcs(s) {
+  if (s == null) return "";
+  return String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+// "17:20" / "17:20-22:00" / "14:00 - 17:00" → { start:"1720", end:"2200" } 或 null
+function parseEventTime(timeStr) {
+  if (!timeStr) return null;
+  const s = String(timeStr).trim();
+  const range = s.match(/^(\d{1,2})[:：](\d{2})\s*[-~到至]\s*(\d{1,2})[:：](\d{2})$/);
+  if (range) {
+    return {
+      start: range[1].padStart(2, "0") + range[2],
+      end:   range[3].padStart(2, "0") + range[4],
+    };
+  }
+  const one = s.match(/^(\d{1,2})[:：](\d{2})$/);
+  if (one) {
+    return { start: one[1].padStart(2, "0") + one[2], end: null };
+  }
+  return null; // 自由文本，无法解析 → 当全天事件
+}
+// 把 "2026-05-17" + "1720" 拼成 floating time "20260517T172000"（不带 Z，让客户端按本地时区显示）
+function fmtFloatingDT(dateStr, hhmm) {
+  const ymd = (dateStr || "").replace(/-/g, "").slice(0, 8);
+  if (!ymd || ymd.length !== 8) return null;
+  return ymd + "T" + (hhmm || "0000") + "00";
+}
+// "2026-05-17" → "20260517"
+function fmtDate(dateStr) { return (dateStr || "").replace(/-/g, "").slice(0, 8); }
+// 当前 UTC 时间戳 DTSTAMP "20260512T034500Z"
+function fmtUtcNow() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
+}
+// 长行折行（RFC 5545: 建议 ≤75 字节）
+function foldIcsLine(line) {
+  if (line.length <= 75) return line;
+  const parts = [];
+  let i = 0;
+  while (i < line.length) {
+    parts.push((i === 0 ? "" : " ") + line.slice(i, i + 74));
+    i += 74;
+  }
+  return parts.join("\r\n");
+}
+// 生成完整 ics 字符串：当前用户在所有可见歌曲里、出席不为 no/状态不为 no_show 的排练 + 路演
+function buildIcsFor(userId) {
+  const user = db.prepare("SELECT * FROM users WHERE id=?").get(userId);
+  if (!user) return null;
+
+  // 用户能看到的歌曲（owner + active member；left 不算）
+  const songs = db.prepare(`
+    SELECT s.id, s.title, s.artist, u.name AS owner_name
+    FROM songs s
+    JOIN users u ON u.id = s.owner_id
+    WHERE s.owner_id=? OR EXISTS (
+      SELECT 1 FROM song_members sm WHERE sm.song_id=s.id AND sm.user_id=? AND sm.status='active'
+    )
+  `).all(userId, userId);
+
+  const lines = [];
+  lines.push("BEGIN:VCALENDAR");
+  lines.push("VERSION:2.0");
+  lines.push("PRODID:-//kpop-server//CN");
+  lines.push("CALSCALE:GREGORIAN");
+  lines.push("METHOD:PUBLISH");
+  lines.push("X-WR-CALNAME:" + escapeIcs(`${user.name} 的 K-pop 日程`));
+  lines.push("X-WR-TIMEZONE:Asia/Shanghai");
+  lines.push("X-PUBLISHED-TTL:PT1H");
+
+  const stamp = fmtUtcNow();
+
+  for (const song of songs) {
+    // 排练
+    const rehs = db.prepare("SELECT * FROM rehearsals WHERE song_id=? ORDER BY date").all(song.id);
+    for (const r of rehs) {
+      // 看我的出席
+      const a = db.prepare("SELECT status FROM rehearsal_attendance WHERE rehearsal_id=? AND user_id=?").get(r.id, userId);
+      if (a && a.status === "no") continue; // 明确不来的不进日历
+      const myStat = a ? a.status : "maybe";
+      const evt = makeEvent({
+        uid: `reh-${r.id}@kpop.special-lifejourney.com`,
+        stamp,
+        date: r.date,
+        time: r.time,
+        title: `📅 ${song.title} 排练`,
+        location: r.location,
+        description: [
+          `🎵 ${song.title}${song.artist ? " · " + song.artist : ""}`,
+          `🚗 车主：${song.owner_name}`,
+          r.outfit ? `👗 服装：${r.outfit}` : null,
+          `我的出席：${myStat === "yes" ? "✓ 来" : "? 待定"}`,
+          r.notes ? `📝 ${r.notes}` : null,
+        ].filter(Boolean).join("\n"),
+      });
+      lines.push(...evt);
+    }
+    // 路演
+    const perfs = db.prepare("SELECT * FROM performances WHERE song_id=? ORDER BY date").all(song.id);
+    for (const p of perfs) {
+      if (p.status === "no_show") continue; // 未演出的不进日历
+      const a = db.prepare("SELECT status FROM performance_attendance WHERE performance_id=? AND user_id=?").get(p.id, userId);
+      if (a && a.status === "no") continue;
+      const myStat = a ? a.status : "maybe";
+      const statusLabel = {
+        pending_submit: "待投稿", submitted: "已投稿",
+        approved: "已通过", done: "已演完",
+      }[p.status] || p.status;
+      const evt = makeEvent({
+        uid: `perf-${p.id}@kpop.special-lifejourney.com`,
+        stamp,
+        date: p.date,
+        time: p.time,
+        title: `🎤 ${p.name}（${song.title}）`,
+        location: [p.city, p.location].filter(Boolean).join(" · "),
+        description: [
+          `🎵 ${song.title}${song.artist ? " · " + song.artist : ""}`,
+          `🚗 车主：${song.owner_name}`,
+          `📋 状态：${statusLabel}`,
+          p.outfit ? `👗 装搭：${p.outfit}` : null,
+          `我的出席：${myStat === "yes" ? "✓ 参演" : "? 待定"}`,
+          p.notes ? `📝 ${p.notes}` : null,
+        ].filter(Boolean).join("\n"),
+      });
+      lines.push(...evt);
+    }
+  }
+  lines.push("END:VCALENDAR");
+  return lines.map(foldIcsLine).join("\r\n") + "\r\n";
+}
+
+function makeEvent({ uid, stamp, date, time, title, location, description }) {
+  const parsed = parseEventTime(time);
+  const out = ["BEGIN:VEVENT"];
+  out.push("UID:" + uid);
+  out.push("DTSTAMP:" + stamp);
+  if (parsed && parsed.start) {
+    const start = fmtFloatingDT(date, parsed.start);
+    const end = fmtFloatingDT(date, parsed.end || addOneHour(parsed.start));
+    if (start) out.push("DTSTART:" + start);
+    if (end)   out.push("DTEND:"   + end);
+  } else {
+    // 全天事件：DTSTART;VALUE=DATE:YYYYMMDD ；DTEND 是次日（按 RFC 5545 半开区间）
+    const d = fmtDate(date);
+    if (d) {
+      out.push("DTSTART;VALUE=DATE:" + d);
+      out.push("DTEND;VALUE=DATE:" + nextDay(d));
+    }
+    if (time) description = `🕑 时间：${time}\n` + description;
+  }
+  out.push("SUMMARY:" + escapeIcs(title));
+  if (location) out.push("LOCATION:" + escapeIcs(location));
+  if (description) out.push("DESCRIPTION:" + escapeIcs(description));
+  out.push("END:VEVENT");
+  return out;
+}
+
+function addOneHour(hhmm) {
+  const h = parseInt(hhmm.slice(0, 2), 10);
+  const m = hhmm.slice(2, 4);
+  return String((h + 1) % 24).padStart(2, "0") + m;
+}
+function nextDay(yyyymmdd) {
+  const y = parseInt(yyyymmdd.slice(0, 4), 10);
+  const m = parseInt(yyyymmdd.slice(4, 6), 10) - 1;
+  const d = parseInt(yyyymmdd.slice(6, 8), 10);
+  const t = new Date(Date.UTC(y, m, d + 1));
+  const p = (n) => String(n).padStart(2, "0");
+  return `${t.getUTCFullYear()}${p(t.getUTCMonth() + 1)}${p(t.getUTCDate())}`;
+}
+
 function areFriends(uidA, uidB) {
   if (uidA === uidB) return false;
   const [a, b] = uidA < uidB ? [uidA, uidB] : [uidB, uidA];
