@@ -187,6 +187,17 @@ try {
   console.error("迁移失败：", e.message);
 }
 
+// 老 users 表加 calendar_token 列（如果还没有）
+try {
+  const uCols = db.prepare("PRAGMA table_info(users)").all();
+  if (!uCols.some((c) => c.name === "calendar_token")) {
+    db.exec("ALTER TABLE users ADD COLUMN calendar_token TEXT");
+    console.log("🔧 已为旧 users 表补 calendar_token 列");
+  }
+} catch (e) {
+  console.error("users 迁移失败：", e.message);
+}
+
 // 路演 status 枚举迁移：旧 planned/confirmed/canceled → 新 pending_submit/approved/no_show（done 保留）
 try {
   const r1 = db.prepare("UPDATE performances SET status='pending_submit' WHERE status='planned'").run();
