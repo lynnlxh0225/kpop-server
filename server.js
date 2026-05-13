@@ -630,9 +630,59 @@ app.delete("/api/songs/:id/members/:uid", authRequired, (req, res) => {
   if (uid === s.owner_id) return res.status(400).json({ error: "车主不能离开自己的歌曲" });
   const canRemove = req.userId === s.owner_id || req.userId === uid;
   if (!canRemove) return res.status(403).json({ error: "无权操作" });
-  const r = db.prepare("UPDATE song_members SET status='left', left_at=? WHERE song_id=? AND user_id=? AND status='active'")
-    .run(now(), songId, uid);
-  if (r.changes === 0) return res.status(404).json({ error: "成员不在歌曲中" });
+
+  // 队伍是总权限：移除时连带清空该 user 在该 song 所有排练 / 路演的出席 + 个人穿搭
+  const tx = db.transaction(() => {
+    const r = db.prepare("UPDATE song_members SET status='left', left_at=? WHERE song_id=? AND user_id=? AND status='active'")
+      .run(now(), songId, uid);
+    if (r.changes === 0) return { ok: false };
+    // 删该 user 在这首歌所有排练的出席
+    db.prepare(`
+      DELETE FROM rehearsal_attendance
+      WHERE user_id=? AND rehearsal_id IN (SELECT id FROM rehearsals WHERE song_id=?)
+    `).run(uid, songId);
+    // 删该 user 在这首歌所有路演的出席
+    db.prepare(`
+      DELETE FROM performance_attendance
+      WHERE user_id=? AND performance_id IN (SELECT id FROM performances WHERE song_id=?)
+    `).run(uid, songId);
+    // 顺便清掉个人穿搭（外键 ON DELETE CASCADE 不会触发因为没删 user，主动删）
+    db.prepare(`
+      DELETE FROM performance_outfits
+      WHERE user_id=? AND performance_id IN (SELECT id FROM performances WHERE song_id=?)
+    `).run(uid, songId);
+    return { ok: true };
+  });
+  const result = tx();
+  if (!result.ok) return res.status(404).json({ error: "成员不在歌曲中" });
+  res.json({ ok: true });
+});
+
+// 车主在单次排练里把某人踢出（不影响他在队伍里）
+app.delete("/api/rehearsals/:id/attendance/:uid", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const uid = parseInt(req.params.uid, 10);
+  const r = db.prepare("SELECT * FROM rehearsals WHERE id=?").get(id);
+  if (!r) return res.status(404).json({ error: "排练不存在" });
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(r.song_id);
+  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可操作" });
+  if (uid === s.owner_id) return res.status(400).json({ error: "不能把车主从自己的排练里踢出" });
+  db.prepare("DELETE FROM rehearsal_attendance WHERE rehearsal_id=? AND user_id=?").run(id, uid);
+  res.json({ ok: true });
+});
+
+// 车主在单次路演里把某人踢出（不影响他在队伍里）
+app.delete("/api/performances/:id/attendance/:uid", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const uid = parseInt(req.params.uid, 10);
+  const p = db.prepare("SELECT * FROM performances WHERE id=?").get(id);
+  if (!p) return res.status(404).json({ error: "路演不存在" });
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(p.song_id);
+  if (s.owner_id !== req.userId) return res.status(403).json({ error: "仅车主可操作" });
+  if (uid === s.owner_id) return res.status(400).json({ error: "不能把车主从自己的路演里踢出" });
+  // 同时清掉该人在这场的个人穿搭
+  db.prepare("DELETE FROM performance_attendance WHERE performance_id=? AND user_id=?").run(id, uid);
+  db.prepare("DELETE FROM performance_outfits WHERE performance_id=? AND user_id=?").run(id, uid);
   res.json({ ok: true });
 });
 
