@@ -1636,11 +1636,12 @@
   function openSongModal(id) {
     editingSongId = id || null;
     document.getElementById("songModalTitle").textContent = id ? "编辑歌曲" : "新建歌曲";
-    const s = id ? findSong(id) : { title: "", artist: "", type: "new", notes: "", position_slots: [] };
+    const s = id ? findSong(id) : { title: "", artist: "", type: "new", notes: "", position_slots: [], private: 0 };
     document.getElementById("songTitle").value = s.title || "";
     document.getElementById("songArtist").value = s.artist || "";
     document.getElementById("songType").value = s.type || "new";
     document.getElementById("songNotes").value = s.notes || "";
+    document.getElementById("songPrivate").checked = !!s.private;
     songSlotsDraft = Array.isArray(s.position_slots) ? s.position_slots.slice() : [];
     document.getElementById("newSlotInput").value = "";
     // 新建模式下，把 artist 当前值再自动识别一次
