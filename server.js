@@ -603,10 +603,11 @@ app.post("/api/auth/register", authLimiter, (req, res) => {
 
   const pwHash = bcrypt.hashSync(password, 10);
   const myInvite = genUniqueInviteCode();
+  const sourceVal = source && VALID_SOURCES.has(source) ? source : "";
   const result = db.prepare(`
-    INSERT INTO users (email, password_hash, name, avatar, invite_code, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(email, pwHash, name.trim(), avatar || "👤", myInvite, now());
+    INSERT INTO users (email, password_hash, name, avatar, invite_code, source, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(email, pwHash, name.trim(), avatar || "👤", myInvite, sourceVal, now());
   const userId = result.lastInsertRowid;
 
   // 通过邀请链接注册 → 自动成为好友
