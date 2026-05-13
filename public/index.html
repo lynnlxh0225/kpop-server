@@ -477,6 +477,34 @@
     padding: 10px 14px; border-radius: 10px; margin-bottom: 14px;
     font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;
   }
+  /* 名额 banner */
+  .seats-banner {
+    background: linear-gradient(135deg, var(--primary-soft), var(--accent-soft));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 13px; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .seats-banner b { color: var(--primary); }
+  .seats-banner.full {
+    background: #fef3c7;
+    border-color: #fbbf24;
+    color: #92400e;
+  }
+  .seats-banner.full b { color: #92400e; }
+  .seats-bar {
+    flex: 1; height: 6px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 3px; overflow: hidden;
+    min-width: 50px;
+  }
+  .seats-bar > i {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 3px;
+  }
 
   /* ============ 位置占位 chips ============ */
   .slot-chips {
