@@ -480,6 +480,16 @@ function songAccess(songId, userId) {
   return null;
 }
 
+// 权限统一：可以管理这首歌（修改歌曲/排练/路演/成员）的判定
+// - 已认领（claimed=1）：必须是车主 owner_id
+// - 未认领（claimed=0）：任何 active 成员都视为有权限
+function canManage(song, userId) {
+  if (!song) return false;
+  if (song.claimed) return song.owner_id === userId;
+  const m = db.prepare("SELECT 1 FROM song_members WHERE song_id=? AND user_id=? AND status='active'").get(song.id, userId);
+  return !!m;
+}
+
 // ==================== Express ====================
 const app = express();
 // nginx 反向代理在前面，信任 X-Forwarded-For（让 rate-limit 拿到真实 IP）
