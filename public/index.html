@@ -1858,10 +1858,11 @@
     const avatar = document.getElementById("reg-avatar").value.trim();
     const inviteCode = document.getElementById("reg-invite").value.trim();
     const agreed = document.getElementById("reg-agreed").checked;
+    const source = document.getElementById("reg-source").value;
     if (!name || !email || !password) return toast("请填完必填项", true);
     if (!agreed) return toast("请先勾选同意《用户协议》和《隐私政策》", true);
     try {
-      const r = await API.post("/auth/register", { name, email, password, avatar, inviteCode, agreed: true });
+      const r = await API.post("/auth/register", { name, email, password, avatar, inviteCode, agreed: true, source });
       API.token = r.token;
       if (r.autoFriend) toast(`欢迎！${r.autoFriend.avatar} ${r.autoFriend.name} 已自动加为好友`);
       else toast("注册成功，欢迎～");
