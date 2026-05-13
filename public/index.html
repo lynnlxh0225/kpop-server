@@ -1614,13 +1614,72 @@
   function openSongModal(id) {
     editingSongId = id || null;
     document.getElementById("songModalTitle").textContent = id ? "编辑歌曲" : "新建歌曲";
-    const s = id ? findSong(id) : { title: "", artist: "", type: "new", notes: "" };
+    const s = id ? findSong(id) : { title: "", artist: "", type: "new", notes: "", position_slots: [] };
     document.getElementById("songTitle").value = s.title || "";
     document.getElementById("songArtist").value = s.artist || "";
     document.getElementById("songType").value = s.type || "new";
     document.getElementById("songNotes").value = s.notes || "";
+    songSlotsDraft = Array.isArray(s.position_slots) ? s.position_slots.slice() : [];
+    document.getElementById("newSlotInput").value = "";
+    // 新建模式下，把 artist 当前值再自动识别一次
+    _slotsManuallyEdited = false;
+    renderSongSlotsBox();
+    if (!id) onArtistInput();
     openModal("songModal");
   }
+
+  // 用户在 modal 里手动改过 slots 的标记。识别 artist 时不要覆盖手动编辑
+  let songSlotsDraft = [];
+  let _slotsManuallyEdited = false;
+
+  function renderSongSlotsBox() {
+    const box = document.getElementById("songSlotsBox");
+    if (!box) return;
+    box.innerHTML = songSlotsDraft.map((name, i) => `
+      <span class="slot-chip">
+        ${escapeHtml(name)}
+        <span class="x" onclick="songSlotsDraft.splice(${i},1);_slotsManuallyEdited=true;renderSongSlotsBox();">×</span>
+      </span>`).join("");
+  }
+  function addSongSlot() {
+    const inp = document.getElementById("newSlotInput");
+    const v = (inp.value || "").trim();
+    if (!v) return;
+    if (songSlotsDraft.length >= 30) return toast("位置数量上限", true);
+    if (songSlotsDraft.find(x => x.toLowerCase() === v.toLowerCase())) {
+      inp.value = "";
+      return toast("已存在同名位置", true);
+    }
+    songSlotsDraft.push(v);
+    _slotsManuallyEdited = true;
+    inp.value = "";
+    renderSongSlotsBox();
+  }
+  function onArtistInput() {
+    const artist = document.getElementById("songArtist").value.trim();
+    const hint = document.getElementById("songSlotsHint");
+    if (!artist) {
+      hint.textContent = "";
+      return;
+    }
+    const guess = suggestSlots(artist);
+    if (guess) {
+      hint.innerHTML = `✨ 识别到 <b>${escapeHtml(guess.name)}</b>（${guess.members.length} 人组合）${_slotsManuallyEdited ? '。已保留你的手动编辑' : '，自动填了位置'}`;
+      // 没手动改过 → 直接覆盖；已手动改过 → 不覆盖
+      if (!_slotsManuallyEdited) {
+        songSlotsDraft = guess.members.slice();
+        renderSongSlotsBox();
+      }
+    } else {
+      hint.innerHTML = `<span style="color:var(--text-soft);">未识别到这个组合，可下面手动加位置（也支持少人版 / 伴舞版）</span>`;
+    }
+  }
+  // 回车快捷加位置
+  document.addEventListener("DOMContentLoaded", () => {
+    const inp = document.getElementById("newSlotInput");
+    if (inp) inp.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); addSongSlot(); } });
+  });
+
   async function saveSong() {
     const title = document.getElementById("songTitle").value.trim();
     if (!title) return toast("请填写歌曲名", true);
@@ -1629,6 +1688,7 @@
       artist: document.getElementById("songArtist").value.trim(),
       type: document.getElementById("songType").value,
       notes: document.getElementById("songNotes").value.trim(),
+      position_slots: songSlotsDraft.slice(),
     };
     try {
       if (editingSongId) await API.patch(`/songs/${editingSongId}`, body);
