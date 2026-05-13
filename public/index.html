@@ -2004,11 +2004,9 @@
       ? `<div style="color:var(--text-soft);font-size:13px;">还没有位置和成员。点上面「✏️ 编辑队伍」加位置，或「+ 添加好友」直接加人。</div>`
       : '';
 
-    const actionHtml = isOwner ? `
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn small ghost" onclick="openEditPositionsModal()">✏️ 编辑队伍</button>
-        <button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>
-      </div>` : '';
+    const actionHtml = canManage ? `
+      <button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>
+    ` : '';
 
     document.getElementById("sub-team").innerHTML = `
       <div class="page-header">
