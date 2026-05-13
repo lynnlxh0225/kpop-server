@@ -2083,6 +2083,8 @@
     // 顶部操作按钮
     const actions = document.getElementById("detailActions");
     let html = '';
+    // 分享图按钮：所有人（包括已退出）都能生成，方便发群公告
+    html += `<button class="btn small ghost" onclick="generateShareImage()">📸 生成分享图</button>`;
     if (!s.claimed && isActiveMember) {
       html += `<button class="btn small" onclick="claimOwner()">🙋 我来当车主</button>`;
       html += `<button class="btn small ghost" onclick="openSongModal(${s.id})">编辑歌曲信息</button>`;
