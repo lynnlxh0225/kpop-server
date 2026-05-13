@@ -773,10 +773,14 @@
     </div>
     <div class="setting-card">
       <h3>账号</h3>
-      <p>邮箱：<span id="setEmail"></span></p>
-      <p>昵称：<span id="setName"></span> · 头像：<span id="setAvatar"></span></p>
-      <button class="btn ghost small" onclick="openEditProfileModal()">编辑资料</button>
-      <button class="btn danger small" onclick="logout()" style="margin-left:8px;">退出登录</button>
+      <div style="font-size:13px;line-height:1.8;">
+        <div><span id="setAvatar"></span> <b id="setName"></b></div>
+        <div id="setEmail" style="font-family:Monaco,monospace;font-size:12px;color:var(--text-soft);"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn ghost small" onclick="openEditProfileModal()">编辑资料</button>
+        <button class="btn danger small" onclick="logout()">退出</button>
+      </div>
     </div>
     <div class="setting-card">
       <h3>📆 排练日历订阅</h3>
