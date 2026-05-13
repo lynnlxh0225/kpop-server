@@ -192,6 +192,10 @@ try {
     db.exec("ALTER TABLE songs ADD COLUMN private INTEGER NOT NULL DEFAULT 0");
     console.log("🔧 已为旧 songs 表补 private 列");
   }
+  if (!sCols.some((c) => c.name === "claimed")) {
+    db.exec("ALTER TABLE songs ADD COLUMN claimed INTEGER NOT NULL DEFAULT 1");
+    console.log("🔧 已为旧 songs 表补 claimed 列（默认全部视为已认领）");
+  }
 } catch (e) {
   console.error("songs 迁移失败：", e.message);
 }
