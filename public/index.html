@@ -596,20 +596,47 @@
     <div class="page-header">
       <h2>📥 整理消息</h2>
     </div>
-    <div class="setting-card">
-      <label class="field">把微信群聊天记录粘贴到这里</label>
-      <textarea id="parseText" placeholder="例如：&#10;Lynn：明晚 7 点 X 练习室排 Whiplash 哦~&#10;小米：好的我去&#10;Cici：我请假明天有事去不了&#10;..." style="min-height:140px;"></textarea>
-      <div style="display:flex;gap:10px;margin-top:10px;align-items:end;flex-wrap:wrap;">
-        <div style="flex:1;min-width:180px;">
-          <label class="field">关联到哪首歌？（可选）</label>
-          <select id="parseSongId">
-            <option value="">AI 自动判断</option>
-          </select>
-        </div>
-        <button class="btn" id="parseBtn" onclick="submitParse()">✨ 帮我整理</button>
+
+    <!-- 关联歌曲（截图模式和文字模式共用） -->
+    <div class="setting-card" style="padding:12px 16px;">
+      <label class="field" style="margin-bottom:6px;">关联到哪首歌？（截图和文字模式共用，可选）</label>
+      <select id="parseSongId">
+        <option value="">AI 自动判断</option>
+      </select>
+    </div>
+
+    <!-- 截图模式（推荐） -->
+    <div class="setting-card" style="border:2px solid var(--pink-soft);">
+      <h3 style="margin:0 0 6px;display:flex;align-items:center;gap:6px;">
+        📷 截图模式 <span class="badge" style="background:var(--pink);color:#fff;font-size:11px;padding:2px 8px;border-radius:8px;">推荐</span>
+      </h3>
+      <p style="font-size:13px;color:var(--text-soft);margin:0 0 10px;">
+        直接在微信里截屏（几条聊天截一张图，多截几张都行），上传给多模态 AI 看图识别。<b>比复制粘贴快 10 倍</b>。
+      </p>
+      <div id="picsBox" class="img-grid"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;">
+        <label class="upload-btn">
+          <input type="file" accept="image/*" multiple style="display:none;" onchange="onPicsPicked(this)" />
+          <span>📷 添加截图</span>
+        </label>
+        <button class="btn" id="parsePicsBtn" onclick="submitParsePics()">✨ 识别这些截图</button>
+        <span id="picsCount" style="font-size:12px;color:var(--text-soft);"></span>
       </div>
-      <div class="parse-hint">
-        💡 在微信群长按一条消息 → 多选 → 选其他消息 → 「合并转发」→ 「复制」，再回到这里粘贴。AI 会识别排练/路演的日期、地点、服装和大家的出席态度。
+      <div class="parse-hint" style="margin-top:10px;">
+        💡 iPhone：<b>同时按音量上 + 电源</b> 截图 → 直接在网站点添加截图、从相册一选就完事。<br>
+        Mac：<b>⌘+Shift+4</b> 框选群聊一段 → 拖到上面虚线框里也行。
+      </div>
+    </div>
+
+    <!-- 文字模式 -->
+    <div class="setting-card" style="margin-top:14px;">
+      <h3 style="margin:0 0 6px;">💬 文字模式</h3>
+      <p style="font-size:13px;color:var(--text-soft);margin:0 0 10px;">
+        <b>一句话也行</b>（比如"明晚 7 点 X 练习室排 Whiplash，小米来 Cici 不来"），AI 也能识别；也可以粘贴整段群聊记录。
+      </p>
+      <textarea id="parseText" placeholder="一句话或一整段聊天都行：&#10;&#10;• 明晚 7 点 X 练习室排 Whiplash，小米来 Cici 不来&#10;• 或粘整段群聊记录..." style="min-height:120px;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn" id="parseBtn" onclick="submitParse()">✨ 帮我整理</button>
       </div>
     </div>
 
