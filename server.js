@@ -798,13 +798,13 @@ app.get("/api/songs", authRequired, (req, res) => {
 });
 
 app.post("/api/songs", authRequired, (req, res) => {
-  const { title, artist, type, notes, position_slots } = req.body || {};
+  const { title, artist, type, notes, position_slots, private: priv } = req.body || {};
   if (!title || !title.trim()) return res.status(400).json({ error: "请填写歌曲名" });
   const slotsJson = JSON.stringify(sanitizePositionSlots(position_slots));
   const r = db.prepare(`
-    INSERT INTO songs (owner_id, title, artist, type, notes, position_slots, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(req.userId, title.trim(), artist || "", type || "new", notes || "", slotsJson, now());
+    INSERT INTO songs (owner_id, title, artist, type, notes, position_slots, private, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(req.userId, title.trim(), artist || "", type || "new", notes || "", slotsJson, priv ? 1 : 0, now());
   // 车主默认也是成员之一（未填位置），方便后续设置
   db.prepare(`
     INSERT INTO song_members (song_id, user_id, position, status, joined_at)
