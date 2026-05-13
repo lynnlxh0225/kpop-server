@@ -785,6 +785,300 @@
     .modal .row-2 { grid-template-columns: 1fr; }
     .pending-card .row-2 { grid-template-columns: 1fr; }
   }
+
+  /* ====================================================================
+     视觉升级 v2 —— 镜面反射 / 几何线条 / 前卫风格
+     - 仅追加效果，不破坏现有布局
+     - 全部走主题变量，三套皮肤都协调
+     ==================================================================== */
+
+  /* ---------- Topbar：扫描线 + 底部镜面反射 ---------- */
+  header.topbar {
+    position: relative;
+    overflow: hidden;
+    /* 顶部加一道极细的彩色 chroma 线，前卫感的"signature" */
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  header.topbar::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      /* 对角细线条 */
+      repeating-linear-gradient(115deg,
+        transparent 0, transparent 22px,
+        rgba(255,255,255,0.06) 22px, rgba(255,255,255,0.06) 23px),
+      /* 顶部镜面高光带 */
+      linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 30%);
+    border-radius: inherit;
+  }
+  header.topbar > * { position: relative; z-index: 1; }
+
+  /* ---------- 导航 tabs：active 加底部彩色 indicator + 主题色发光 ---------- */
+  nav.tabs button.active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    box-shadow:
+      0 4px 14px -2px var(--mirror-lo),
+      inset 0 1px 0 rgba(255,255,255,0.35);
+    position: relative;
+  }
+  nav.tabs button.active::after {
+    content: ''; position: absolute; left: 14%; right: 14%; bottom: -3px; height: 2px;
+    background: linear-gradient(90deg, var(--chroma-a), var(--chroma-b));
+    border-radius: 2px; opacity: 0.85;
+  }
+
+  /* ---------- 主按钮：sweep shine 扫光 + 主题渐变 ---------- */
+  .btn {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    position: relative; overflow: hidden;
+    box-shadow:
+      0 4px 14px -2px var(--mirror-lo),
+      inset 0 1px 0 rgba(255,255,255,0.28);
+    letter-spacing: 0.3px;
+  }
+  .btn::after {
+    content: ''; position: absolute; top: 0; left: -120%;
+    width: 80%; height: 100%;
+    background: linear-gradient(110deg,
+      transparent 0%, rgba(255,255,255,0.32) 50%, transparent 100%);
+    transform: skewX(-22deg);
+    transition: left .55s cubic-bezier(.25,.8,.4,1);
+    pointer-events: none;
+  }
+  .btn:hover::after { left: 130%; }
+  .btn.ghost {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    color: var(--primary); border: 1px solid var(--primary);
+  }
+  .btn.ghost::after { display: none; }
+
+  /* ---------- Hero 卡片：扫描线 + 底部镜面倒影带 ---------- */
+  .hero-card {
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .hero-card::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      /* 顶部镜面高光 */
+      linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 28%),
+      /* 左下到右上的对角细条纹 */
+      repeating-linear-gradient(120deg,
+        transparent 0, transparent 28px,
+        rgba(255,255,255,0.05) 28px, rgba(255,255,255,0.05) 29px);
+    border-radius: inherit; z-index: 0;
+  }
+  /* 底部一条贯通的镜面反光 + 主题色 chroma 边 */
+  .hero-card::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+    height: 38%;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(255,255,255,0.10) 60%,
+      rgba(255,255,255,0.22) 100%);
+    pointer-events: none; z-index: 0;
+    mix-blend-mode: overlay;
+  }
+  .hero-deco { z-index: 0; }
+  .hero-content { z-index: 2; }
+  .hero-greeting {
+    background: linear-gradient(110deg, #ffffff 0%, #ffffff 40%, rgba(255,255,255,0.65) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+  }
+  .hero-stat {
+    border: 1px solid rgba(255,255,255,0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.25),
+      0 4px 10px -4px rgba(0,0,0,0.25);
+    position: relative; overflow: hidden;
+  }
+  .hero-stat::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 100%);
+    pointer-events: none;
+  }
+  .hero-stat b, .hero-stat span { position: relative; }
+
+  /* ---------- 歌曲卡片：corner brackets + hover 时主题色斜光 ---------- */
+  .song-card {
+    border: 1px solid var(--border);
+    background:
+      linear-gradient(180deg, var(--card) 0%, var(--card) 100%);
+  }
+  .song-card::before {
+    /* 顶部 3 段 chroma 渐变更前卫 */
+    background: linear-gradient(90deg, var(--chroma-a) 0%, var(--chroma-b) 50%, var(--chroma-c) 100%);
+    height: 3px; opacity: 0.9;
+  }
+  /* 右上 + 左下两个赛博风角标 */
+  .song-card .corner-tl,
+  .song-card::after {
+    content: ''; position: absolute;
+    right: 10px; top: 12px;
+    width: 14px; height: 14px;
+    border-top: 1.5px solid var(--primary);
+    border-right: 1.5px solid var(--primary);
+    opacity: 0.55;
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+  }
+  .song-card:hover::after { opacity: 1; transform: translate(2px, -2px); }
+  .song-card:hover {
+    border-color: var(--primary);
+    box-shadow:
+      0 10px 30px -8px var(--mirror-lo),
+      0 0 0 1px var(--primary-soft);
+  }
+
+  /* ---------- 详情子 tabs：现代化 ---------- */
+  .detail-tabs button.active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px -2px var(--mirror-lo);
+  }
+
+  /* ---------- setting-card / item-card / pending-card：加一道细镜面 ---------- */
+  .setting-card,
+  .item-card,
+  .pending-card,
+  .friend-card,
+  .request-card {
+    position: relative; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .setting-card::before,
+  .item-card::before,
+  .pending-card::before,
+  .friend-card::before,
+  .request-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      var(--mirror-hi) 30%,
+      var(--mirror-hi) 70%,
+      transparent 100%);
+    opacity: 0.7; pointer-events: none;
+  }
+  /* setting-card 标题前加一段主题色短线（章节锚点感） */
+  .setting-card h3 {
+    position: relative;
+    padding-left: 14px;
+  }
+  .setting-card h3::before {
+    content: ''; position: absolute; left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 4px; height: 16px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%);
+  }
+
+  /* ---------- 皮肤卡片：active 时彩虹 chroma 边 + 强镜面 ---------- */
+  .theme-card .theme-preview::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(115deg,
+        transparent 0, transparent 14px,
+        rgba(255,255,255,0.06) 14px, rgba(255,255,255,0.06) 15px),
+      linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .theme-card.active {
+    border-color: transparent;
+    background-image: linear-gradient(var(--card), var(--card)),
+                      linear-gradient(135deg, var(--chroma-a), var(--chroma-b), var(--chroma-c));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    box-shadow: 0 8px 24px -8px var(--mirror-lo);
+  }
+
+  /* ---------- 邀请码 box：升级镜面 ---------- */
+  .invite-code-box {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, var(--primary-soft) 0%, var(--accent-soft) 100%);
+    border: 1px solid var(--border);
+  }
+  .invite-code-box::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--chroma-a), var(--chroma-b), var(--chroma-c));
+  }
+  .invite-code-box code { color: var(--primary-deep); }
+  .copy-btn {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    box-shadow: 0 2px 6px -1px var(--mirror-lo);
+  }
+
+  /* ---------- Modal：玻璃 + 主题色顶边 ---------- */
+  .modal-bg {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(15, 15, 35, 0.55);
+  }
+  .modal {
+    position: relative; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .modal::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--chroma-a), var(--chroma-b), var(--chroma-c));
+  }
+
+  /* ---------- 近期安排卡片：边缘镜面 + 主题色驱动 ---------- */
+  .qb-card {
+    position: relative; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .qb-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--primary), var(--accent));
+    opacity: 0.8;
+  }
+  .qb-card .qb-kind.reh { background: var(--primary-soft); color: var(--primary-deep); }
+  .qb-card .qb-kind.perf { background: var(--accent-soft); color: var(--accent-deep); }
+  .qb-card .qb-when { color: var(--primary-deep); }
+  .qb-empty {
+    background: linear-gradient(135deg, var(--primary-soft) 0%, var(--accent-soft) 100%);
+    color: var(--primary-deep);
+    border: 1px solid var(--border);
+  }
+
+  /* ---------- 教程折叠块：用主题色 ---------- */
+  details.howto-block {
+    background: linear-gradient(135deg, var(--primary-soft) 0%, var(--accent-soft) 100%);
+    border: 1px solid var(--border);
+  }
+  details.howto-block > summary { color: var(--primary-deep); }
+
+  /* ---------- topbar 顶部彩色 chroma 边 + actions 玻璃感 ---------- */
+  header.topbar { box-shadow: 0 10px 30px -8px var(--mirror-lo), var(--shadow); }
+  header.topbar::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg, var(--chroma-a), var(--chroma-b), var(--chroma-c));
+    z-index: 2;
+  }
+  .icon-btn {
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.22);
+  }
+  .user-chip {
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.22);
+  }
+
+  /* ---------- 反折效果 / 动效 ---------- */
+  @keyframes shine-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  .badge.role-owner,
+  .role-banner.owner {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #fcd34d;
+  }
+
+  /* iOS Safari：mix-blend-mode 在 hero-card 内层可能出问题，退化方案 */
+  @supports not (mix-blend-mode: overlay) {
+    .hero-card::after { mix-blend-mode: normal; opacity: 0.6; }
+  }
 </style>
 </head>
 <body>
