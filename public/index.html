@@ -1739,6 +1739,16 @@
       position_slots: songSlotsDraft.slice(),
       private: document.getElementById("songPrivate").checked ? 1 : 0,
     };
+    // 新建模式才提交车主决定（编辑模式去歌曲详情里转让）
+    if (!editingSongId) {
+      const ownerVal = document.getElementById("songOwner").value;
+      if (ownerVal === "unclaimed") {
+        body.claimed = 0;
+      } else if (ownerVal.startsWith("friend:")) {
+        body.owner_id = parseInt(ownerVal.slice(7), 10);
+      }
+      // self 不传 → 后端默认 req.userId
+    }
     try {
       if (editingSongId) await API.patch(`/songs/${editingSongId}`, body);
       else await API.post(`/songs`, body);
