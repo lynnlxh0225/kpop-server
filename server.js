@@ -557,7 +557,8 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", time: new Date().t
 
 // ==================== 认证 ====================
 app.post("/api/auth/register", authLimiter, (req, res) => {
-  const { email, password, name, avatar, inviteCode } = req.body || {};
+  const { email, password, name, avatar, inviteCode, agreed } = req.body || {};
+  if (!agreed) return res.status(400).json({ error: "需要同意《用户协议》和《隐私政策》才能注册" });
   if (!isEmail(email)) return res.status(400).json({ error: "邮箱格式不正确" });
   if (!password || password.length < 6) return res.status(400).json({ error: "密码至少 6 位" });
   if (!name || !name.trim()) return res.status(400).json({ error: "请填写昵称" });
