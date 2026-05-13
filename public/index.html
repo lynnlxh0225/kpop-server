@@ -790,6 +790,10 @@
           <label class="field">邀请码 <span style="color:var(--text-soft);font-weight:normal;">（朋友给你的，没有就留空）</span></label>
           <input id="reg-invite" placeholder="8 位字符" />
         </div>
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-soft);cursor:pointer;line-height:1.5;">
+          <input type="checkbox" id="reg-agreed" style="width:auto;margin:3px 0 0;flex-shrink:0;" />
+          <span>我已阅读并同意 <a href="/terms.html" target="_blank" style="color:var(--primary);">《用户协议》</a> 和 <a href="/privacy.html" target="_blank" style="color:var(--primary);">《隐私政策》</a>，且 ≥14 周岁（14-18 周岁已获监护人同意）</span>
+        </label>
         <button class="btn block" onclick="doRegister()">注 册</button>
       </div>
       <div class="auth-toggle">已有账号？<a onclick="showLogin()">去登录</a></div>
