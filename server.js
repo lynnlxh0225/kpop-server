@@ -26,6 +26,8 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 const JWT_SECRET = process.env.JWT_SECRET || "dev-only-change-me";
 const DB_PATH = process.env.DB_PATH || "./data/data.db";
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+// 注册上限：当前用户数 ≥ MAX_USERS 时关闭注册
+const MAX_USERS = parseInt(process.env.MAX_USERS || "50", 10);
 
 // AI 服务（默认 DeepSeek，OpenAI 兼容协议；可改成通义/Kimi/智谱 等同协议服务）
 const AI_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || "";
