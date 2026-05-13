@@ -1429,7 +1429,11 @@
       const attHtml = (p.attendance || []).map(a => {
         const color = a.status === 'yes' ? 'success' : a.status === 'no' ? 'danger' : 'warn';
         const txt = a.status === 'yes' ? '✓ 参演' : a.status === 'no' ? '✗ 不参' : '? 待定';
-        return `<span class="chip" style="background:#fff4cc;color:#92670d;">${a.avatar || '👤'} ${escapeHtml(a.name)} <span class="pos" style="color:var(--${color});">${txt}</span></span>`;
+        const canKick = isOwner && a.user_id !== s.owner_id;
+        const kickBtn = canKick
+          ? `<span class="leave-x" onclick="event.stopPropagation();removePerfAtt(${p.id}, ${a.user_id}, '${escapeAttr(a.name)}')" title="把 TA 从这次路演移除">×</span>`
+          : '';
+        return `<span class="chip" style="background:#fff4cc;color:#92670d;">${a.avatar || '👤'} ${escapeHtml(a.name)} <span class="pos" style="color:var(--${color});">${txt}</span>${kickBtn}</span>`;
       }).join("");
       const myAttHtml = (!isLeft) ? `
         <div class="my-att-bar">
