@@ -1815,6 +1815,176 @@
       toast("已保存");
     } catch (e) { toast(e.message, true); }
   }
+  // ===================== 生成分享图 =====================
+  let _shareImageDataUrl = null;
+  let _shareImageBlob = null;
+
+  async function generateShareImage() {
+    const s = findSong(currentSongId);
+    if (!s) return;
+    if (typeof html2canvas !== "function") {
+      return toast("截图库还在加载，等 2 秒再点", true);
+    }
+    toast("📸 生成中…");
+    const card = buildShareCardDOM(s);
+    const off = document.getElementById("shareCardOffscreen");
+    off.innerHTML = "";
+    off.appendChild(card);
+    try {
+      const canvas = await html2canvas(card, {
+        scale: 2,
+        backgroundColor: null,
+        useCORS: true,
+        logging: false,
+      });
+      _shareImageDataUrl = canvas.toDataURL("image/png");
+      await new Promise((resolve) => {
+        canvas.toBlob((b) => { _shareImageBlob = b; resolve(); }, "image/png");
+      });
+      const preview = document.getElementById("shareImagePreview");
+      preview.innerHTML = `<img src="${_shareImageDataUrl}" style="max-width:100%;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,0.15);" alt="${escapeAttr(s.title)} 分享图" />`;
+      openModal("shareImageModal");
+    } catch (e) {
+      console.error("生成分享图失败", e);
+      toast("生成失败：" + (e.message || "未知错误"), true);
+    } finally {
+      off.innerHTML = "";
+    }
+  }
+
+  function downloadShareImage() {
+    if (!_shareImageDataUrl) return toast("还没生成", true);
+    const s = findSong(currentSongId);
+    const name = `${(s ? s.title : "song").replace(/[^\w一-龥]+/g, "_")}-分享图.png`;
+    const a = document.createElement("a");
+    a.href = _shareImageDataUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // 构建分享卡片 DOM（用 inline style 直接写，避免 html2canvas 解不到 CSS 变量）
+  function buildShareCardDOM(s) {
+    // 从当前主题取颜色
+    const cs = getComputedStyle(document.documentElement);
+    const heroFrom = cs.getPropertyValue("--hero-from").trim() || "#1a1a2e";
+    const heroVia  = cs.getPropertyValue("--hero-via").trim()  || "#4c1d95";
+    const heroTo   = cs.getPropertyValue("--hero-to").trim()   || "#06b6d4";
+
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    const slots = Array.isArray(s.position_slots) ? s.position_slots : [];
+    const active = (s.team || []).filter(t => t.status === 'active');
+    const findM = (slot) => active.find(m => (m.position || "").toLowerCase().trim() === slot.toLowerCase().trim());
+
+    const upcomingReh = (s.rehearsals || [])
+      .filter(r => r.date && r.date >= todayStr)
+      .slice().sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')))
+      .slice(0, 3);
+    const upcomingPerf = (s.performances || [])
+      .filter(p => p.date && p.date >= todayStr && p.status !== 'no_show')
+      .slice().sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')))
+      .slice(0, 3);
+
+    const wrap = document.createElement("div");
+    wrap.style.cssText = `
+      width: 600px;
+      box-sizing: border-box;
+      padding: 36px 32px 28px;
+      background: linear-gradient(135deg, ${heroFrom} 0%, ${heroVia} 50%, ${heroTo} 100%);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.5;
+    `;
+
+    // 头部：歌名 + 组合
+    const head = document.createElement("div");
+    head.innerHTML = `
+      <div style="font-size:13px;opacity:0.75;letter-spacing:1px;">${s.type === 'new' ? '🆕 NEW' : '💎 CLASSIC'} · ${s.private ? '🔒 PRIVATE · ' : ''}K-POP DANCE COVER</div>
+      <div style="font-size:38px;font-weight:800;margin-top:6px;letter-spacing:-0.5px;">🎤 ${escapeHtml(s.title)}</div>
+      <div style="font-size:18px;opacity:0.92;margin-top:4px;">${escapeHtml(s.artist || '未知组合')}</div>
+    `;
+    wrap.appendChild(head);
+
+    // 车主
+    const ownerBox = document.createElement("div");
+    ownerBox.style.cssText = "margin-top:18px;font-size:14px;";
+    ownerBox.innerHTML = `🚗 车主：<b>${escapeHtml(s.owner ? s.owner.name : '?')}</b>${!s.claimed ? ' <span style="opacity:0.7;">（待认领）</span>' : ''}`;
+    wrap.appendChild(ownerBox);
+
+    // 队伍位置
+    if (slots.length || active.length) {
+      const teamBox = document.createElement("div");
+      teamBox.style.cssText = "margin-top:18px;background:rgba(255,255,255,0.10);border-radius:14px;padding:14px 16px;";
+      let teamInner = `<div style="font-size:13px;opacity:0.8;margin-bottom:8px;">👥 队伍${slots.length ? ` · ${active.length} / ${slots.length} 位` : ''}</div>`;
+      const seen = new Set();
+      if (slots.length) {
+        teamInner += slots.map(name => {
+          const m = findM(name);
+          if (m) seen.add(m.user_id);
+          return `
+            <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0;">
+              <span><b>${escapeHtml(name)}</b></span>
+              <span style="opacity:${m ? 1 : 0.5};">${m ? (m.avatar || '👤') + ' ' + escapeHtml(m.name) : '— 未分配'}</span>
+            </div>`;
+        }).join("");
+      }
+      const extra = active.filter(m => !seen.has(m.user_id));
+      if (extra.length) {
+        teamInner += extra.map(m => `
+          <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0;">
+            <span style="opacity:0.7;">其他</span>
+            <span>${m.avatar || '👤'} ${escapeHtml(m.name)}${m.position ? ' · ' + escapeHtml(m.position) : ''}</span>
+          </div>`).join("");
+      }
+      teamBox.innerHTML = teamInner;
+      wrap.appendChild(teamBox);
+    }
+
+    // 近期排练
+    if (upcomingReh.length) {
+      const rehBox = document.createElement("div");
+      rehBox.style.cssText = "margin-top:14px;background:rgba(255,255,255,0.10);border-radius:14px;padding:14px 16px;";
+      rehBox.innerHTML = `
+        <div style="font-size:13px;opacity:0.8;margin-bottom:8px;">📅 近期排练</div>
+        ${upcomingReh.map(r => `
+          <div style="font-size:14px;padding:4px 0;">
+            <b>${escapeHtml(r.date)}</b>${r.time ? ' · ' + escapeHtml(r.time) : ''}${r.location ? '  📍 ' + escapeHtml(r.location) : ''}${r.outfit ? '  👗 ' + escapeHtml(r.outfit) : ''}
+          </div>`).join("")}
+      `;
+      wrap.appendChild(rehBox);
+    }
+
+    // 近期路演
+    if (upcomingPerf.length) {
+      const perfBox = document.createElement("div");
+      perfBox.style.cssText = "margin-top:14px;background:rgba(255,255,255,0.10);border-radius:14px;padding:14px 16px;";
+      const statusLabel = {
+        pending_submit: "待投稿", submitted: "已投稿",
+        approved: "已通过", done: "已演完",
+      };
+      perfBox.innerHTML = `
+        <div style="font-size:13px;opacity:0.8;margin-bottom:8px;">🎤 近期路演</div>
+        ${upcomingPerf.map(p => `
+          <div style="font-size:14px;padding:4px 0;">
+            <b>${escapeHtml(p.name)}</b>${p.city ? '  📍 ' + escapeHtml(p.city) : ''}<br>
+            <span style="opacity:0.85;">${escapeHtml(p.date)}${p.time ? ' · ' + escapeHtml(p.time) : ''} · ${statusLabel[p.status] || p.status}</span>
+          </div>`).join("")}
+      `;
+      wrap.appendChild(perfBox);
+    }
+
+    // 底部水印
+    const footer = document.createElement("div");
+    footer.style.cssText = "margin-top:22px;font-size:11px;opacity:0.6;text-align:center;letter-spacing:0.5px;";
+    footer.textContent = `K-POP DANCE MANAGER · ${todayStr}`;
+    wrap.appendChild(footer);
+
+    return wrap;
+  }
+
   async function deleteCurrentSong() {
     if (!confirm("确认删除这首歌？所有排练/路演也会一起删除。")) return;
     try {
