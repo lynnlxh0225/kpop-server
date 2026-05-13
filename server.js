@@ -1547,6 +1547,7 @@ app.post("/api/parse", authRequired, parseLimiter, async (req, res) => {
 
   let raw;
   try {
+    consumeQuota(req.userId, "parse");
     const messages = buildParseMessages({ user, friends, songs: ownedSongs, text: text.toString(), hintSongId });
     raw = await callAI(messages);
   } catch (e) {
