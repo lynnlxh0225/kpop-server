@@ -2301,15 +2301,22 @@
     addMemberSelected = uid;
   }
   async function addMemberToSong() {
-    if (!addMemberSelected) return toast("请先选一个好友", true);
+    if (!addMemberSelected) return toast("请先选一个人", true);
     const position = document.getElementById("newMemberPosition").value.trim();
+    // 如果选的是"我自己"且我已经是 active 成员，走 PUT 改位置；否则走 POST 加新成员
+    const s = findSong(currentSongId);
+    const meAlreadyActive = (s.team || []).some(t => t.user_id === addMemberSelected && t.status === 'active');
     try {
-      await API.post(`/songs/${currentSongId}/members`, { user_id: addMemberSelected, position });
+      if (addMemberSelected === state.user.id && meAlreadyActive) {
+        await API.put(`/songs/${currentSongId}/members/${state.user.id}/position`, { position });
+      } else {
+        await API.post(`/songs/${currentSongId}/members`, { user_id: addMemberSelected, position });
+      }
       await loadSongs();
       renderTeam();
       renderSongs();
       closeModal("addMemberModal");
-      toast("已添加");
+      toast(addMemberSelected === state.user.id ? "已分配到位置" : "已添加");
     } catch (e) { toast(e.message, true); }
   }
   // 内联编辑位置（slot 数组）：失焦改名 / 删除 / 加位置
