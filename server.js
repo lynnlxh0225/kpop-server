@@ -89,6 +89,7 @@ db.exec(`
     notes TEXT DEFAULT '',
     position_slots TEXT NOT NULL DEFAULT '[]',
     private INTEGER NOT NULL DEFAULT 0,
+    claimed INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
   );
