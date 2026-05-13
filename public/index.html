@@ -1207,6 +1207,9 @@
   }
 
   // ===================== Tab =====================
+  // 防止 popstate 触发的 switchTab 又往 history 里 push（造成循环）
+  let _suppressHistory = false;
+
   function switchTab(tab) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -1223,8 +1226,38 @@
       if (btn) btn.classList.add("active");
     }
     if (tab === "inbox") renderInbox();
+    // 切换页面后滚回顶部（手机端尤其重要）
+    window.scrollTo({ top: 0, behavior: "instant" });
+    // 同步到浏览器历史，让系统左滑返回手势能"返回上一个 tab"
+    if (!_suppressHistory && state.user) {
+      const stateObj = tab === "detail" ? { tab: "detail", songId: currentSongId } : { tab };
+      history.pushState(stateObj, "");
+    }
   }
   document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
+
+  // 系统返回手势：iOS 左滑 / Android 返回键 → 走 popstate → 回到上一个 tab
+  window.addEventListener("popstate", (e) => {
+    if (!state.user) return; // 未登录时让浏览器自己处理
+    _suppressHistory = true;
+    try {
+      const s = e.state || { tab: "songs" };
+      if (s.tab === "detail" && s.songId) {
+        const found = findSong(s.songId);
+        if (found) {
+          currentSongId = s.songId;
+          openSongDetail(s.songId);
+        } else {
+          switchTab("songs");
+        }
+      } else {
+        currentSongId = null;
+        switchTab(s.tab || "songs");
+      }
+    } finally {
+      _suppressHistory = false;
+    }
+  });
 
   // ===================== 歌曲列表 =====================
   // ===================== Hero + 近期安排轮播 =====================
