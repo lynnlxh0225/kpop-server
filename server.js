@@ -1122,8 +1122,14 @@ async function callAI(messages, opts = {}) {
       if (typeof first.content === "string") {
         first.content = sysJoined + "\n\n" + first.content;
       } else if (Array.isArray(first.content)) {
-        // 多模态：把 system 文本塞进第一个 text 节点之前
-        first.content = [{ type: "text", text: sysJoined }, ...first.content];
+        // 多模态：找到 text 节点把 system 拼到它前面（保持图片在前的顺序）
+        let textIdx = first.content.findIndex((c) => c.type === "text");
+        if (textIdx >= 0) {
+          const oldText = first.content[textIdx].text || "";
+          first.content[textIdx] = { type: "text", text: sysJoined + "\n\n" + oldText };
+        } else {
+          first.content.push({ type: "text", text: sysJoined });
+        }
       }
       actualMessages = userMsgs;
     }
