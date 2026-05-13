@@ -2567,13 +2567,14 @@
     }
     list.innerHTML = `<div class="friend-grid">${
       state.friends.map(f => `
-        <div class="friend-card">
+        <div class="friend-card" onclick="openFriendDetail(${f.id})" style="cursor:pointer;">
           <div class="av">${f.avatar || '👤'}</div>
           <div class="info">
             <div class="name">${escapeHtml(f.name)}</div>
             <div class="since">好友 · ${new Date(f.friended_at).toLocaleDateString()}</div>
           </div>
-          <button class="del-btn" onclick="removeFriend(${f.id}, '${escapeAttr(f.name)}')" title="删除好友">✕</button>
+          <button class="btn small ghost" onclick="event.stopPropagation();openFriendDetail(${f.id})" style="margin-right:4px;">看 ta 跳的舞 →</button>
+          <button class="del-btn" onclick="event.stopPropagation();removeFriend(${f.id}, '${escapeAttr(f.name)}')" title="删除好友">✕</button>
         </div>`).join("")
     }</div>`;
   }
