@@ -1306,6 +1306,38 @@ function saveAttendance(kind, refId, items, songId) {
 }
 
 // ==================== AI 解析（微信群消息整理） ====================
+// 每用户每日 AI 配额（防止单用户烧光 API key）
+const DAILY_QUOTA = {
+  parse: 30,         // 文字解析 30 次/天
+  parse_images: 10,  // 截图识别 10 次/天（多模态贵）
+};
+function todayStr() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function getUsage(userId, kind) {
+  const r = db.prepare("SELECT count FROM daily_usage WHERE user_id=? AND date=? AND kind=?")
+    .get(userId, todayStr(), kind);
+  return r ? r.count : 0;
+}
+// 检查配额并 +1。超限抛错（带 statusCode=429）
+function consumeQuota(userId, kind) {
+  const max = DAILY_QUOTA[kind];
+  if (!max) return; // 没限制
+  const date = todayStr();
+  const cur = getUsage(userId, kind);
+  if (cur >= max) {
+    const e = new Error(`今日「${kind === 'parse' ? '文字整理' : '截图识别'}」已用完（${cur}/${max}），明天再来或联系管理员升级配额`);
+    e.statusCode = 429;
+    throw e;
+  }
+  db.prepare(`
+    INSERT INTO daily_usage (user_id, date, kind, count) VALUES (?, ?, ?, 1)
+    ON CONFLICT(user_id, date, kind) DO UPDATE SET count = count + 1
+  `).run(userId, date, kind);
+}
+
 async function callAI(messages, opts = {}) {
   if (!AI_API_KEY) {
     const err = new Error("后端未配置 AI key（DEEPSEEK_API_KEY / AI_API_KEY），无法解析");
