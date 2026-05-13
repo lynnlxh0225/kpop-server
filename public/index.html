@@ -2624,6 +2624,104 @@
     } catch (e) { toast(e.message, true); }
   }
 
+  // ===================== 好友详情（看 ta 跳的舞） =====================
+  async function openFriendDetail(uid) {
+    switchTab("friend-detail");
+    document.getElementById("friendDetailHeader").innerHTML = `<div style="color:var(--text-soft);font-size:13px;">加载中…</div>`;
+    document.getElementById("friendSongsList").innerHTML = "";
+    try {
+      const r = await API.get(`/friends/${uid}/songs`);
+      renderFriendDetail(r.friend, r.songs || []);
+    } catch (e) {
+      document.getElementById("friendDetailHeader").innerHTML = `<div style="color:var(--danger);">加载失败：${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderFriendDetail(friend, songs) {
+    const active = songs.filter(s => s.friend_role === 'active' || s.friend_role === 'owner');
+    const left = songs.filter(s => s.friend_role === 'left');
+    const overlap = active.filter(s => s.is_overlap);
+    const onlyTa = active.filter(s => !s.is_overlap);
+
+    document.getElementById("friendDetailHeader").innerHTML = `
+      <div style="display:flex;gap:14px;align-items:center;">
+        <span style="font-size:42px;">${friend.avatar || '👤'}</span>
+        <div>
+          <h2 style="margin:0;font-size:20px;">${escapeHtml(friend.name)}</h2>
+          <div style="font-size:13px;color:var(--text-soft);margin-top:4px;">${active.length} 首在跳${left.length ? ' · ' + left.length + ' 首历史' : ''}</div>
+        </div>
+      </div>
+    `;
+
+    const sectionHtml = (title, list, icon) => list.length ? `
+      <div style="margin-top:14px;">
+        <h3 style="font-size:14px;color:var(--text-soft);margin:0 0 8px;font-weight:600;">${icon} ${title}（${list.length}）</h3>
+        ${list.map(renderFriendSongCard).join("")}
+      </div>` : '';
+
+    document.getElementById("friendSongsList").innerHTML = !songs.length
+      ? `<div class="empty"><span class="emoji">🎵</span><div>${escapeHtml(friend.name)} 还没有跳过歌</div></div>`
+      : sectionHtml("我们一起在跳", overlap, "💞")
+      + sectionHtml("只 ta 在跳", onlyTa, "🎤")
+      + sectionHtml("历史（已退出）", left, "📦");
+  }
+
+  function renderFriendSongCard(s) {
+    const typeBadge = s.type === 'new' ? '新歌' : '经典';
+    const dotPrivacy = '<span style="color:var(--text-soft);">·</span>';
+    const positionChip = s.friend_position
+      ? `<span class="slot-chip" style="margin-left:6px;">${escapeHtml(s.friend_position)}</span>`
+      : '';
+    const roleLabel = s.friend_role === 'owner'
+      ? '<span class="badge" style="background:var(--primary-soft);color:var(--primary-deep);">🚗 ta 是车主</span>'
+      : s.friend_role === 'left'
+        ? '<span class="badge" style="background:#f3f4f6;color:var(--gray);">已退出</span>'
+        : '<span class="badge" style="background:var(--accent-soft);color:var(--accent-deep);">在跳</span>';
+    const overlapBadge = s.is_overlap
+      ? '<span class="badge" style="background:#d1fae5;color:#047857;">🤝 你也在</span>' : '';
+
+    // 未来安排：只数字 + 最近一场日期
+    const upcomingReh = s.upcoming_rehearsals && s.upcoming_rehearsals.count
+      ? `📅 接下来 ${s.upcoming_rehearsals.count} 场排练${s.upcoming_rehearsals.next_date ? '，下一场 ' + s.upcoming_rehearsals.next_date : ''}`
+      : '';
+    const upcomingPerf = s.upcoming_performances && s.upcoming_performances.count
+      ? `🎤 接下来 ${s.upcoming_performances.count} 场路演${s.upcoming_performances.next_date ? '，下一场 ' + s.upcoming_performances.next_date : ''}`
+      : '';
+
+    // 已完成的路演：名字 + 城市 + 日期
+    const donePerfs = (s.completed_performances || []).slice(0, 3);
+    const donePerfHtml = donePerfs.length ? `
+      <div style="margin-top:8px;font-size:12px;color:var(--text-soft);">
+        ✨ 已演出过：${donePerfs.map(p => `${escapeHtml(p.name)}${p.city ? ' · ' + escapeHtml(p.city) : ''}${p.date ? ' · ' + p.date : ''}`).join('；')}
+        ${s.completed_performances.length > 3 ? `（共 ${s.completed_performances.length} 场）` : ''}
+      </div>` : '';
+
+    const actionBtn = s.is_overlap
+      ? `<button class="btn small ghost" onclick="openSongDetail(${s.id})">查看歌曲 →</button>`
+      : '';
+
+    return `
+      <div class="item-card" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:flex-start;gap:8px;justify-content:space-between;flex-wrap:wrap;">
+          <div style="flex:1;min-width:0;">
+            <h4 style="margin:0 0 4px;font-size:15px;">${escapeHtml(s.title)} ${positionChip}</h4>
+            <div style="font-size:12px;color:var(--text-soft);">
+              ${escapeHtml(s.artist || '未知组合')} · ${typeBadge} · 车主 ${escapeHtml(s.owner ? s.owner.name : '?')}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+              ${roleLabel}
+              ${overlapBadge}
+              <span class="badge" style="background:var(--bg);color:var(--text-soft);">👥 ${s.team_size} 位</span>
+            </div>
+            ${upcomingReh ? `<div style="margin-top:8px;font-size:12px;color:var(--text);">${upcomingReh}</div>` : ''}
+            ${upcomingPerf ? `<div style="margin-top:4px;font-size:12px;color:var(--text);">${upcomingPerf}</div>` : ''}
+            ${donePerfHtml}
+          </div>
+          ${actionBtn}
+        </div>
+      </div>`;
+  }
+
   // ===================== 设置 =====================
   function renderSettings() {
     document.getElementById("setEmail").textContent = state.user.email;
