@@ -747,6 +747,7 @@ app.get("/api/songs", authRequired, (req, res) => {
   // 给每首歌附加队伍 / 排练 / 路演 简要信息
   for (const s of songs) {
     s.owner = publicUser(db.prepare("SELECT * FROM users WHERE id=?").get(s.owner_id));
+    try { s.position_slots = JSON.parse(s.position_slots || "[]"); } catch { s.position_slots = []; }
     s.team = db.prepare(`
       SELECT sm.user_id, sm.position, sm.status, sm.joined_at, sm.left_at,
              u.name, u.avatar
