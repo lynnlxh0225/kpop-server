@@ -1164,6 +1164,7 @@
     state.user = me.user;
     renderHeader();
     await Promise.all([loadFriends(), loadRequests(), loadSongs(), loadPending()]);
+    renderHero();
     renderSongs();
     renderFriends();
     renderSettings();
