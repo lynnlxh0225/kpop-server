@@ -179,6 +179,17 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_items(user_id, status);
 `);
+// 老版本数据库迁移：songs 表加 position_slots 列
+try {
+  const sCols = db.prepare("PRAGMA table_info(songs)").all();
+  if (!sCols.some((c) => c.name === "position_slots")) {
+    db.exec("ALTER TABLE songs ADD COLUMN position_slots TEXT NOT NULL DEFAULT '[]'");
+    console.log("🔧 已为旧 songs 表补 position_slots 列");
+  }
+} catch (e) {
+  console.error("songs 迁移失败：", e.message);
+}
+
 // 老版本数据库迁移：performances 表加 outfit_images 列
 try {
   const cols = db.prepare("PRAGMA table_info(performances)").all();
