@@ -1863,6 +1863,47 @@
     document.getElementById("setAvatar").textContent = state.user.avatar;
     document.getElementById("myInviteCode").textContent = state.user.invite_code;
     document.getElementById("myInviteLink").value = `${location.origin}/?invite=${state.user.invite_code}`;
+    loadCalendarUrl();
+  }
+
+  // ===================== 日历订阅 =====================
+  let _calendarPath = null;
+  async function loadCalendarUrl() {
+    try {
+      const r = await API.get("/auth/calendar-url");
+      applyCalendarUrl(r.path);
+    } catch (e) {
+      const inp = document.getElementById("calendarUrlInput");
+      if (inp) inp.value = "拿不到订阅链接：" + e.message;
+    }
+  }
+  function applyCalendarUrl(path) {
+    _calendarPath = path;
+    const inp = document.getElementById("calendarUrlInput");
+    const link = document.getElementById("calendarOneTapLink");
+    if (!inp || !link) return;
+    // 普通显示用 https://
+    inp.value = `${location.origin}${path}`;
+    // iPhone Safari 点 webcal:// 会直接弹出"添加订阅日历"对话框
+    const host = location.host;
+    const webcalUrl = `webcal://${host}${path}`;
+    link.href = webcalUrl;
+    link.style.display = "";
+  }
+  function copyCalendarUrl() {
+    const v = document.getElementById("calendarUrlInput").value;
+    if (!v) return;
+    copyToClipboard(v)
+      .then(() => toast("订阅链接已复制，去 iPhone「日历 → 添加日历 → 添加订阅日历」粘进去"))
+      .catch(() => toast("复制失败，请手动选中链接复制", true));
+  }
+  async function regenerateCalendarToken() {
+    if (!confirm("重置后旧的订阅链接立即失效，需要在 iPhone 日历里删掉老的、用新链接重新添加。继续？")) return;
+    try {
+      const r = await API.post("/auth/regenerate-calendar-token");
+      applyCalendarUrl(r.path);
+      toast("已生成新订阅链接");
+    } catch (e) { toast(e.message, true); }
   }
   // 兼容 HTTP 环境的复制（HTTPS 下用现代 API，HTTP 下用 execCommand 降级）
   function copyToClipboard(text) {
