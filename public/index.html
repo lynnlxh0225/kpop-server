@@ -2067,6 +2067,8 @@
     if (!history.state || !history.state.tab) {
       history.replaceState({ tab: "songs" }, "");
     }
+    // 新版本上线，所有用户看一次新手引导（已看过的不会再弹）
+    setTimeout(maybeShowOnboarding, 400); // 略延迟让首屏先渲染
   }
   function showRegister() {
     document.getElementById("login-card").style.display = "none";
