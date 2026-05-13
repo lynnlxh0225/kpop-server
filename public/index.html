@@ -70,7 +70,14 @@
   textarea { min-height: 70px; resize: vertical; }
   label.field { display:block; font-size: 12px; font-weight:600; color: var(--text-soft); margin: 0 0 6px; }
 
-  .app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .app {
+    max-width: 1100px; margin: 0 auto;
+    padding: 16px;
+    /* 适配 iPhone 刘海/手势条：底部留出系统安全区 */
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
   header.topbar {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 18px;
