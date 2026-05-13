@@ -606,7 +606,7 @@
     </div>
     <div class="setting-card">
       <h3>📆 排练日历订阅</h3>
-      <p>把下面的链接粘到 iPhone「日历 → 添加日历 → 添加订阅日历」（Android 用 Google Calendar 网页端「设置 → 添加日历 → 通过网址」），所有排练 / 路演会自动出现在系统日历里，前一天会自动提醒。</p>
+      <p>订阅后所有排练 / 路演会出现在 iPhone / Android 系统日历里，前一天自动提醒，不用打开网站就能查。</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
         <input id="calendarUrlInput" readonly placeholder="加载中…" style="flex:1;min-width:240px;font-family:Monaco,monospace;font-size:12px;" />
         <button class="copy-btn" onclick="copyCalendarUrl()">复制链接</button>
@@ -615,7 +615,24 @@
         <a id="calendarOneTapLink" class="btn small" style="display:none;" href="#">📱 一键添加到 iPhone</a>
         <button class="btn ghost small" onclick="regenerateCalendarToken()">🔄 重置订阅链接（旧链接立即失效）</button>
       </div>
-      <p style="font-size:12px;color:var(--text-soft);margin-top:8px;">💡 隐私提示：链接里带的 token 等同于「只读你日程」的钥匙；不要发到群里、不要泄漏。被泄漏立即点上面重置。</p>
+
+      <details class="howto-block" style="margin-top:12px;">
+        <summary>📖 iPhone 添加教程（点开展开 · 5 步）</summary>
+        <div class="howto-body">
+          <p class="howto-tip">💡 推荐方法：在 <b>iPhone 自带 Safari</b> 浏览器里登录这个网站 → 来这个设置页 → 点上面紫色「📱 一键添加到 iPhone」按钮，会自动跳转到日历 app。下面是手动方法。</p>
+          <ol class="howto-steps">
+            <li><b>复制链接</b>：点上面「复制链接」按钮，链接被复制到剪贴板。</li>
+            <li><b>打开 iPhone 自带「日历」app</b>（图标是带 17 的白底日历）。</li>
+            <li><b>点底部中间的「日历」图标</b>—— 就是截图里的那个 <span class="kbd">📅</span>，藏在最下面一排正中间，旁边是「今天」和「收件箱」。<br><span class="howto-note">⚠️ 注意这是 app 内的"日历列表"按钮，不是去 iOS 设置里。</span></li>
+            <li><b>滑到弹出页面的最底部</b>，点「<span class="kbd">添加日历</span>」→「<span class="kbd">添加订阅日历</span>」（不是"添加日历"那一项）。</li>
+            <li><b>把剪贴板内容粘到「服务器」框</b>里 → 右上角「订阅」→「添加」。</li>
+          </ol>
+          <p class="howto-tip" style="margin-top:10px;">成功后回月历视图，所有排练 / 路演会出现，前一天自动提醒。新加的事件 iOS 大概 1 小时内同步过来；想更快可去 <b>iOS 设置 → 日历 → 帐户 → 选订阅 → 刷新</b>，改成「每 15 分钟」。</p>
+          <p class="howto-tip">Android / Mac 用户看完整指南：<a href="/docs" target="_blank">docs/手机日历订阅指南.md</a>（或在仓库里找）。</p>
+        </div>
+      </details>
+
+      <p style="font-size:12px;color:var(--text-soft);margin-top:8px;">🔒 隐私提示：链接里带的 token 等同于「只读你日程」的钥匙；不要发到群里、不要泄漏。被泄漏立即点上面重置。</p>
     </div>
     <div class="setting-card">
       <h3>数据导出</h3>
