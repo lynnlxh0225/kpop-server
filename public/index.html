@@ -1823,15 +1823,18 @@
   <div class="modal">
     <h3 id="rehearsalModalTitle">添加排练</h3>
     <div class="form-grid">
-      <div class="row-2">
-        <div>
-          <label class="field">日期 *</label>
-          <input id="rehDate" type="date" />
+      <div>
+        <label class="field">日期 *</label>
+        <input id="rehDate" type="date" />
+      </div>
+      <div>
+        <label class="field">时间（开始 - 结束）</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input id="rehTimeFrom" type="time" style="flex:1;" />
+          <span style="color:var(--text-soft);">→</span>
+          <input id="rehTimeTo" type="time" style="flex:1;" />
         </div>
-        <div>
-          <label class="field">时间</label>
-          <input id="rehTime" placeholder="例如：14:00-17:00" />
-        </div>
+        <input id="rehTime" type="hidden" />
       </div>
       <div>
         <label class="field">地点</label>
@@ -1839,7 +1842,8 @@
       </div>
       <div>
         <label class="field">服装要求</label>
-        <input id="rehOutfit" placeholder="例如：黑色短袖 + 牛仔短裤" />
+        <input id="rehOutfit" placeholder="黑色短袖 + 牛仔短裤" />
+        <div class="preset-chips" data-target="rehOutfit"></div>
       </div>
       <div>
         <label class="field">备注</label>
