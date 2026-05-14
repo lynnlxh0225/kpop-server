@@ -251,6 +251,23 @@ db.exec(`
     PRIMARY KEY (user_id, date, kind),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  -- 歌曲招募申请
+  CREATE TABLE IF NOT EXISTS song_applications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    song_id INTEGER NOT NULL,
+    applicant_id INTEGER NOT NULL,
+    position TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending', -- pending | approved | rejected | cancelled
+    reject_reason TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    responded_at INTEGER,
+    FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
+    FOREIGN KEY (applicant_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_app_song_status ON song_applications(song_id, status);
+  CREATE INDEX IF NOT EXISTS idx_app_applicant ON song_applications(applicant_id);
 `);
 // 老版本数据库迁移：songs 表加 position_slots / private 列
 try {
