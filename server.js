@@ -1239,6 +1239,284 @@ app.delete("/api/songs/:id/members/:uid", authRequired, (req, res) => {
   res.json({ ok: true });
 });
 
+// ==================== 歌曲招募 ====================
+// 车主开启 / 更新招募
+app.post("/api/songs/:id/recruit", authRequired, (req, res) => {
+  const songId = parseInt(req.params.id, 10);
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可开招募" });
+
+  const b = req.body || {};
+  const note = (b.note || "").toString().slice(0, 500);
+  const city = (b.city || "").toString().trim();
+  if (!city || !VALID_CITIES.has(city)) return res.status(400).json({ error: "请选择有效城市" });
+
+  // open_slots 必须是 song.position_slots 的子集
+  let slots = [];
+  try { slots = JSON.parse(s.position_slots || "[]"); } catch {}
+  const reqSlots = Array.isArray(b.open_slots) ? b.open_slots.filter(x => typeof x === "string") : [];
+  const validOpen = reqSlots.filter(x => slots.includes(x));
+  if (!validOpen.length) return res.status(400).json({ error: "至少要勾一个开放位置" });
+
+  db.prepare(`
+    UPDATE songs SET
+      recruiting=1,
+      recruit_note=?,
+      recruit_open_slots=?,
+      recruit_city=?,
+      recruit_started_at=COALESCE(recruit_started_at, ?)
+    WHERE id=?
+  `).run(note, JSON.stringify(validOpen), city, now(), songId);
+
+  res.json({ ok: true });
+});
+
+// 车主关闭招募 → 所有 pending 申请自动 cancelled
+app.delete("/api/songs/:id/recruit", authRequired, (req, res) => {
+  const songId = parseInt(req.params.id, 10);
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可关招募" });
+
+  const tx = db.transaction(() => {
+    db.prepare("UPDATE songs SET recruiting=0 WHERE id=?").run(songId);
+    const r = db.prepare(`
+      UPDATE song_applications SET status='cancelled', responded_at=?
+      WHERE song_id=? AND status='pending'
+    `).run(now(), songId);
+    return r.changes;
+  });
+  const cancelled = tx();
+  res.json({ ok: true, cancelled_count: cancelled });
+});
+
+// 公开招募列表（任何登录用户）
+app.get("/api/recruits", authRequired, (req, res) => {
+  const city = (req.query.city || "").toString().trim();
+  let where = "s.recruiting=1 AND s.private=0";
+  const params = [];
+  if (city) { where += " AND s.recruit_city=?"; params.push(city); }
+
+  const songs = db.prepare(`
+    SELECT s.*, u.name AS owner_name, u.avatar AS owner_avatar
+    FROM songs s
+    JOIN users u ON u.id = s.owner_id
+    WHERE ${where}
+    ORDER BY s.recruit_started_at DESC
+    LIMIT 100
+  `).all(...params);
+
+  // 每首歌算：active 成员数 / 位置占用 / 我的申请状态
+  const list = songs.map((s) => {
+    const members = db.prepare(`
+      SELECT sm.position, u.id AS user_id, u.name, u.avatar
+      FROM song_members sm
+      JOIN users u ON u.id = sm.user_id
+      WHERE sm.song_id=? AND sm.status='active'
+    `).all(s.id);
+    // 车主也算成员，列表里没车主 row 时手动加
+    const ownerInMembers = members.some(m => m.user_id === s.owner_id);
+    if (!ownerInMembers) {
+      const owner = db.prepare("SELECT id, name, avatar FROM users WHERE id=?").get(s.owner_id);
+      // 车主的 position 取自他在 song_members 里的 row（如果有 left 状态）或者空
+      members.unshift({ user_id: owner.id, name: owner.name, avatar: owner.avatar, position: "" });
+    }
+    let openSlots = [];
+    try { openSlots = JSON.parse(s.recruit_open_slots || "[]"); } catch {}
+    let allSlots = [];
+    try { allSlots = JSON.parse(s.position_slots || "[]"); } catch {}
+    // 实际还可申请的位置 = open_slots 中尚未被 active 成员占用的
+    const occupied = new Set(members.map(m => m.position).filter(Boolean));
+    const remainingOpen = openSlots.filter(x => !occupied.has(x));
+
+    // 我的申请状态
+    const myApp = db.prepare(`
+      SELECT * FROM song_applications WHERE song_id=? AND applicant_id=?
+      ORDER BY created_at DESC LIMIT 1
+    `).get(s.id, req.userId);
+    // 我是否已经是 active 成员
+    const isMember = members.some(m => m.user_id === req.userId);
+    // 我过去被这首歌拒绝的次数（用于 3 次锁定）
+    const rejectCount = db.prepare(`
+      SELECT COUNT(*) AS c FROM song_applications
+      WHERE song_id=? AND applicant_id=? AND status='rejected'
+    `).get(s.id, req.userId).c;
+
+    return {
+      id: s.id,
+      title: s.title,
+      artist: s.artist,
+      type: s.type,
+      owner: { id: s.owner_id, name: s.owner_name, avatar: s.owner_avatar },
+      recruit_note: s.recruit_note,
+      recruit_city: s.recruit_city,
+      recruit_started_at: s.recruit_started_at,
+      all_slots: allSlots,
+      open_slots: openSlots,
+      remaining_slots: remainingOpen,
+      active_member_count: members.length,
+      total_slot_count: allSlots.length,
+      my_application: myApp ? {
+        id: myApp.id, status: myApp.status, position: myApp.position,
+        reject_reason: myApp.reject_reason
+      } : null,
+      is_member: isMember,
+      reject_count: rejectCount,  // 前端用来判断是否锁死（>=3 不能再申请）
+    };
+  });
+  res.json({ recruits: list });
+});
+
+// 申请加入（任何登录用户）
+app.post("/api/songs/:id/applications", authRequired, (req, res) => {
+  const songId = parseInt(req.params.id, 10);
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (!s.recruiting) return res.status(400).json({ error: "这首歌没在招募" });
+  if (s.owner_id === req.userId) return res.status(400).json({ error: "你是这首歌的车主" });
+
+  // 已是 active 成员？
+  const existing = db.prepare(`
+    SELECT 1 FROM song_members WHERE song_id=? AND user_id=? AND status='active'
+  `).get(songId, req.userId);
+  if (existing) return res.status(409).json({ error: "你已是这首歌的成员" });
+
+  // 已有 pending 申请？
+  const pending = db.prepare(`
+    SELECT 1 FROM song_applications WHERE song_id=? AND applicant_id=? AND status='pending'
+  `).get(songId, req.userId);
+  if (pending) return res.status(409).json({ error: "已有申请在等审核" });
+
+  // 被拒次数 >= 3 → 锁死
+  const rejected = db.prepare(`
+    SELECT COUNT(*) AS c FROM song_applications
+    WHERE song_id=? AND applicant_id=? AND status='rejected'
+  `).get(songId, req.userId).c;
+  if (rejected >= 3) return res.status(403).json({ error: "你已被这首歌拒绝 3 次，不能再申请" });
+
+  const b = req.body || {};
+  const position = (b.position || "").toString().slice(0, 50);
+  const message = (b.message || "").toString().slice(0, 300);
+  if (!position) return res.status(400).json({ error: "请选一个位置" });
+
+  // 验证 position 必须在当前还能申请的列表里（open_slots 中未被占用的）
+  let openSlots = [];
+  try { openSlots = JSON.parse(s.recruit_open_slots || "[]"); } catch {}
+  if (!openSlots.includes(position)) return res.status(400).json({ error: "这个位置不开放申请" });
+  const occupied = db.prepare(`
+    SELECT position FROM song_members WHERE song_id=? AND status='active'
+  `).all(songId).map(x => x.position).filter(Boolean);
+  if (occupied.includes(position)) return res.status(400).json({ error: "这个位置已被占用，选别的" });
+
+  const id = db.prepare(`
+    INSERT INTO song_applications (song_id, applicant_id, position, message, status, created_at)
+    VALUES (?, ?, ?, ?, 'pending', ?)
+  `).run(songId, req.userId, position, message, now()).lastInsertRowid;
+  res.json({ id, status: "pending", message: "已提交申请，等车主审核" });
+});
+
+// 车主看本歌曲所有申请（pending 在前）
+app.get("/api/songs/:id/applications", authRequired, (req, res) => {
+  const songId = parseInt(req.params.id, 10);
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(songId);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可查看申请" });
+
+  const rows = db.prepare(`
+    SELECT a.*, u.name AS applicant_name, u.avatar AS applicant_avatar
+    FROM song_applications a
+    JOIN users u ON u.id = a.applicant_id
+    WHERE a.song_id=?
+    ORDER BY
+      CASE a.status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'rejected' THEN 2 ELSE 3 END,
+      a.created_at DESC
+    LIMIT 50
+  `).all(songId);
+  res.json({ applications: rows });
+});
+
+// 我提交的所有申请（用于"我的申请"页 / 卡片下的 my_application 字段）
+app.get("/api/me/applications", authRequired, (req, res) => {
+  const rows = db.prepare(`
+    SELECT a.*, s.title, s.artist
+    FROM song_applications a
+    JOIN songs s ON s.id = a.song_id
+    WHERE a.applicant_id=?
+    ORDER BY a.created_at DESC
+    LIMIT 30
+  `).all(req.userId);
+  res.json({ applications: rows });
+});
+
+// 车主批准申请 → 自动入队 + 占位；若满员则自动关闭招募
+app.post("/api/applications/:id/approve", authRequired, (req, res) => {
+  const appId = parseInt(req.params.id, 10);
+  const a = db.prepare("SELECT * FROM song_applications WHERE id=?").get(appId);
+  if (!a) return res.status(404).json({ error: "申请不存在" });
+  if (a.status !== "pending") return res.status(400).json({ error: "申请已处理" });
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(a.song_id);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可审核" });
+
+  // 再次检查位置是否还可占（防并发）
+  const occupied = db.prepare(`
+    SELECT position FROM song_members WHERE song_id=? AND status='active'
+  `).all(a.song_id).map(x => x.position).filter(Boolean);
+  if (occupied.includes(a.position)) {
+    return res.status(409).json({ error: "这个位置在审核期间被其它成员占了，请联系申请人改位置" });
+  }
+
+  const tx = db.transaction(() => {
+    // 把申请人加入成员（如果他之前是 left 状态，恢复成 active）
+    const existing = db.prepare("SELECT * FROM song_members WHERE song_id=? AND user_id=?").get(a.song_id, a.applicant_id);
+    if (existing) {
+      db.prepare("UPDATE song_members SET status='active', position=?, joined_at=?, left_at=NULL WHERE song_id=? AND user_id=?")
+        .run(a.position, now(), a.song_id, a.applicant_id);
+    } else {
+      db.prepare("INSERT INTO song_members (song_id, user_id, position, status, joined_at) VALUES (?, ?, ?, 'active', ?)")
+        .run(a.song_id, a.applicant_id, a.position, now());
+    }
+    db.prepare("UPDATE song_applications SET status='approved', responded_at=? WHERE id=?").run(now(), appId);
+
+    // 满员检查：open_slots 是否全被占完
+    let openSlots = [];
+    try { openSlots = JSON.parse(s.recruit_open_slots || "[]"); } catch {}
+    const occupiedNow = db.prepare(`
+      SELECT position FROM song_members WHERE song_id=? AND status='active'
+    `).all(a.song_id).map(x => x.position).filter(Boolean);
+    const remaining = openSlots.filter(x => !occupiedNow.includes(x));
+    let autoClosed = false;
+    if (remaining.length === 0) {
+      // 自动关招募 + 把其他 pending 申请置 cancelled
+      db.prepare("UPDATE songs SET recruiting=0 WHERE id=?").run(a.song_id);
+      db.prepare(`
+        UPDATE song_applications SET status='cancelled', responded_at=?
+        WHERE song_id=? AND status='pending'
+      `).run(now(), a.song_id);
+      autoClosed = true;
+    }
+    return autoClosed;
+  });
+  const autoClosed = tx();
+  res.json({ ok: true, auto_closed: autoClosed });
+});
+
+// 车主拒绝申请
+app.post("/api/applications/:id/reject", authRequired, (req, res) => {
+  const appId = parseInt(req.params.id, 10);
+  const a = db.prepare("SELECT * FROM song_applications WHERE id=?").get(appId);
+  if (!a) return res.status(404).json({ error: "申请不存在" });
+  if (a.status !== "pending") return res.status(400).json({ error: "申请已处理" });
+  const s = db.prepare("SELECT * FROM songs WHERE id=?").get(a.song_id);
+  if (!s) return res.status(404).json({ error: "歌曲不存在" });
+  if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可审核" });
+  const reason = (req.body && req.body.reason || "").toString().slice(0, 200);
+  db.prepare("UPDATE song_applications SET status='rejected', reject_reason=?, responded_at=? WHERE id=?")
+    .run(reason, now(), appId);
+  res.json({ ok: true });
+});
+
 // 车主在单次排练里把某人踢出（不影响他在队伍里）
 app.delete("/api/rehearsals/:id/attendance/:uid", authRequired, (req, res) => {
   const id = parseInt(req.params.id, 10);
