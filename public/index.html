@@ -4579,53 +4579,37 @@
     const myGoing = myInterests.includes('going');
     const myInterested = myInterests.includes('interested');
     const interestedCount = (typeof a.interested_count === 'number') ? a.interested_count : Math.max(0, (a.interests_count || 0) - (a.going_count || 0));
-    const sourceLink = a.source_url
-      ? `<a href="${escapeAttr(a.source_url)}" target="_blank" rel="noopener" style="color:var(--primary);font-size:12px;">来源 ↗</a>`
-      : '';
-    // 投稿截止：是否已过 / 近 24h
-    let deadlineBadge = '';
-    if (a.submit_deadline) {
-      deadlineBadge = `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-weight:600;">📮 截 ${escapeHtml(a.submit_deadline)}</span>`;
-    }
-    const themeBadge = a.theme
-      ? `<span style="font-size:11px;background:var(--primary-soft);color:var(--primary-deep);padding:2px 8px;border-radius:6px;font-weight:600;">🎵 ${escapeHtml(a.theme)}</span>`
-      : '';
-    const organizerLine = a.organizer
-      ? `<div style="font-size:12px;color:var(--text-soft);margin-top:2px;">${escapeHtml(a.organizer)}</div>` : '';
+    // 次要信息折叠到 details 里
+    const hasDetails = a.submit_email || a.submit_info || a.songs || a.note || a.highlights || a.organizer || a.source_url;
+    const detailsHtml = hasDetails ? `
+      <details class="activity-more" style="margin-top:8px;">
+        <summary style="cursor:pointer;color:var(--primary);font-size:12px;list-style:none;">详情</summary>
+        <div style="font-size:12px;color:var(--text-soft);line-height:1.7;margin-top:6px;">
+          ${a.organizer ? `<div>🏢 ${escapeHtml(a.organizer)}</div>` : ''}
+          ${a.highlights ? `<div>✨ ${escapeHtml(a.highlights)}</div>` : ''}
+          ${a.songs ? `<div>🎵 ${escapeHtml(a.songs)}</div>` : ''}
+          ${a.submit_email ? `<div>📮 投稿 <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">${escapeHtml(a.submit_email)}</code></div>` : ''}
+          ${a.submit_info ? `<div style="white-space:pre-wrap;margin-top:4px;">${escapeHtml(a.submit_info)}</div>` : ''}
+          ${a.note ? `<div>📝 ${escapeHtml(a.note)}</div>` : ''}
+          ${a.source_url ? `<div style="margin-top:4px;"><a href="${escapeAttr(a.source_url)}" target="_blank" rel="noopener" style="color:var(--primary);">来源 ↗</a></div>` : ''}
+        </div>
+      </details>` : '';
+    // 主要信息：title + 一行核心信息（时间 + 地点） + theme/截止 chip + 操作行
+    const chips = [];
+    if (a.theme) chips.push(`<span style="font-size:11px;background:var(--primary-soft);color:var(--primary-deep);padding:1px 8px;border-radius:6px;font-weight:600;">${escapeHtml(a.theme)}</span>`);
+    if (a.submit_deadline) chips.push(`<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 8px;border-radius:6px;font-weight:600;">📮 ${escapeHtml(a.submit_deadline)}</span>`);
+    const locLine = [a.time && `⏰ ${a.time}`, a.location && `📍 ${a.location}${a.district ? ` (${a.district})` : ''}`].filter(Boolean).map(escapeHtml).join(' · ');
     return `
       <div class="item-card" style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <div style="flex:1;min-width:0;">
-            <h4 style="margin:0 0 4px;font-size:15px;">🎤 ${escapeHtml(a.title)}</h4>
-            ${organizerLine}
-            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-              ${themeBadge}
-              ${deadlineBadge}
-            </div>
-            <div style="font-size:12px;color:var(--text-soft);line-height:1.7;margin-top:6px;">
-              ${a.time ? `⏰ ${escapeHtml(a.time)}` : ''}
-              ${a.location ? `<br>📍 ${escapeHtml(a.location)}${a.district ? ` (${escapeHtml(a.district)})` : ''}` : a.district ? `<br>📍 ${escapeHtml(a.district)}` : ''}
-              ${a.highlights ? `<br>✨ ${escapeHtml(a.highlights)}` : ''}
-              ${a.submit_email ? `<br>📮 投稿邮箱 <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">${escapeHtml(a.submit_email)}</code>` : ''}
-              ${a.submit_info ? `<br><details style="margin-top:4px;"><summary style="cursor:pointer;color:var(--primary);">投稿要求 / 格式</summary><div style="white-space:pre-wrap;padding:6px 0;">${escapeHtml(a.submit_info)}</div></details>` : ''}
-              ${a.songs ? `<br>🎵 ${escapeHtml(a.songs)}` : ''}
-              ${a.note ? `<br>📝 ${escapeHtml(a.note)}` : ''}
-            </div>
-            <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <span style="font-size:11px;color:var(--text-soft);">${a.submitter && a.submitter.avatar || '👤'} ${escapeHtml(a.submitter ? a.submitter.name : '?')} 提交</span>
-              ${sourceLink}
-            </div>
-          </div>
-        </div>
+        <h4 style="margin:0 0 4px;font-size:15px;">${escapeHtml(a.title)}</h4>
+        ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">${chips.join('')}</div>` : ''}
+        ${locLine ? `<div style="font-size:12px;color:var(--text-soft);">${locLine}</div>` : ''}
+        ${detailsHtml}
         <div style="margin-top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-          <button class="btn small ${myGoing ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'going')">
-            ${myGoing ? '✓ 我去' : '我去'}
-          </button>
-          <button class="btn small ${myInterested ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'interested')">
-            ${myInterested ? '✓ 感兴趣' : '感兴趣'}
-          </button>
-          ${a.going_count ? `<span style="font-size:12px;color:var(--text-soft);">👥 ${a.going_count} 人去</span>` : ''}
-          ${interestedCount ? `<span style="font-size:12px;color:var(--text-soft);">${a.going_count ? '·' : ''} ${interestedCount} 感兴趣</span>` : ''}
+          <button class="btn small ${myGoing ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'going')">${myGoing ? '✓ 我去' : '我去'}</button>
+          <button class="btn small ${myInterested ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'interested')">${myInterested ? '✓ 想去' : '想去'}</button>
+          ${a.going_count ? `<span style="font-size:12px;color:var(--text-soft);margin-left:4px;">${a.going_count} 人去</span>` : ''}
+          ${interestedCount ? `<span style="font-size:12px;color:var(--text-soft);">${a.going_count ? '·' : ''} ${interestedCount} 想</span>` : ''}
         </div>
       </div>`;
   }
