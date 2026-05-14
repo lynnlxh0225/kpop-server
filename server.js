@@ -223,13 +223,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_act_city_date ON activities(city, date);
   CREATE INDEX IF NOT EXISTS idx_act_status ON activities(status);
 
-  -- 用户对活动的兴趣表达
+  -- 用户对活动的兴趣表达（一人对同一活动可同时表达 going + interested）
   CREATE TABLE IF NOT EXISTS activity_interests (
     activity_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'going',  -- going | interested
     created_at INTEGER NOT NULL,
-    PRIMARY KEY (activity_id, user_id),
+    PRIMARY KEY (activity_id, user_id, status),
     FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
