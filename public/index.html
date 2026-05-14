@@ -4814,11 +4814,22 @@
     if (!body.agreed_truthful) return toast("请先勾选承诺真实", true);
     const btn = document.getElementById("submitActivityBtn");
     const orig = btn.textContent;
-    btn.disabled = true; btn.textContent = "提交中...";
+    btn.disabled = true; btn.textContent = editingActivityId ? "保存中..." : "提交中...";
     try {
-      const r = await API.post("/activities", body);
-      toast("🎉 " + (r.message || "已提交，等审核"));
+      let r;
+      if (editingActivityId) {
+        r = await API.patch(`/activities/${editingActivityId}`, body);
+      } else {
+        r = await API.post("/activities", body);
+      }
+      toast("🎉 " + (r.message || (editingActivityId ? "已重新提交审核" : "已提交，等审核")));
       closeModal("submitActivityModal");
+      editingActivityId = null;
+      // 如果"我提交的"弹窗还开着，刷新它
+      if (document.getElementById("myActivitiesModal")) {
+        document.getElementById("myActivitiesModal").remove();
+        showMyActivities();
+      }
     } catch (e) {
       toast(e.message, true);
     } finally {
