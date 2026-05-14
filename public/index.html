@@ -4272,8 +4272,10 @@
   }
 
   function renderActivityCard(a) {
-    const myGoing = a.my_interest === 'going';
-    const myInterested = a.my_interest === 'interested';
+    const myInterests = Array.isArray(a.my_interests) ? a.my_interests : (a.my_interest ? [a.my_interest] : []);
+    const myGoing = myInterests.includes('going');
+    const myInterested = myInterests.includes('interested');
+    const interestedCount = (typeof a.interested_count === 'number') ? a.interested_count : Math.max(0, (a.interests_count || 0) - (a.going_count || 0));
     const sourceLink = a.source_url
       ? `<a href="${escapeAttr(a.source_url)}" target="_blank" rel="noopener" style="color:var(--primary);font-size:12px;">来源 ↗</a>`
       : '';
