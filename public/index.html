@@ -4218,38 +4218,18 @@
   }
   function openAddFriendModal() {
     document.getElementById("addFriendCode").value = "";
-    document.getElementById("addFriendMsg").value = "";
     openModal("addFriendModal");
   }
   async function sendFriendRequest() {
     const code = document.getElementById("addFriendCode").value.trim();
-    const message = document.getElementById("addFriendMsg").value.trim();
     if (!code) return toast("请填邀请码", true);
     try {
-      const r = await API.post("/friend-requests", { code, message });
-      if (r.accepted) toast(`✓ 已直接成为好友（对方先邀请过你）`);
-      else toast(`✓ 申请已发送给 ${r.target?.name || '对方'}`);
+      const r = await API.post("/friend-requests", { code });
+      const name = r.friend?.name || "对方";
+      toast(`✓ 已加 ${name} 为好友`);
       await loadFriends();
-      await loadRequests();
       renderFriends();
       closeModal("addFriendModal");
-    } catch (e) { toast(e.message, true); }
-  }
-  async function acceptFriendRequest(id) {
-    try {
-      await API.post(`/friend-requests/${id}/accept`);
-      await loadFriends();
-      await loadRequests();
-      renderFriends();
-      toast("✓ 已成为好友");
-    } catch (e) { toast(e.message, true); }
-  }
-  async function rejectFriendRequest(id) {
-    try {
-      await API.post(`/friend-requests/${id}/reject`);
-      await loadRequests();
-      renderFriends();
-      toast("已拒绝");
     } catch (e) { toast(e.message, true); }
   }
   async function removeFriend(uid, name) {
