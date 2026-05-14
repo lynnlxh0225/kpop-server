@@ -3722,9 +3722,17 @@
     const p = id ? (s.performances || []).find(x => x.id === id) : null;
     document.getElementById("perfModalTitle").textContent = id ? "编辑路演" : "添加路演";
     document.getElementById("perfName").value = p?.name || "";
-    document.getElementById("perfCity").value = p?.city || "北京";
+    // 城市：select，如果老数据不在白名单就回退到"其它"
+    const cityVal = p?.city || "北京";
+    const citySel = document.getElementById("perfCity");
+    if (citySel) {
+      const has = Array.from(citySel.options).some(o => o.value === cityVal);
+      citySel.value = has ? cityVal : "其它";
+    }
     document.getElementById("perfDate").value = p?.date || "";
-    document.getElementById("perfTime").value = p?.time || "";
+    // 时间：type=time 期望 HH:MM；如果老数据是自由文本就尝试解析，否则置空
+    const [pFrom] = parseTimeRange(p?.time);
+    document.getElementById("perfTime").value = pFrom || (/^\d{2}:\d{2}$/.test(p?.time || '') ? p.time : '');
     document.getElementById("perfStatus").value = p?.status || "pending_submit";
     document.getElementById("perfLocation").value = p?.location || "";
     document.getElementById("perfOutfit").value = p?.outfit || "";
