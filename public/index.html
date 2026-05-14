@@ -3539,12 +3539,18 @@
       const ownerActions = isOwner ? `
         <button class="btn small ghost" onclick="openRehearsalModal(${r.id})">编辑</button>
         <button class="btn small danger" onclick="deleteRehearsal(${r.id})">删除</button>` : '';
+      // 标题：日期 + 时间；副行：地点 + 服装合并
+      const subParts = [];
+      if (r.location) subParts.push('📍 ' + r.location);
+      if (r.outfit) subParts.push('👗 ' + r.outfit);
+      const subLine = subParts.length
+        ? `<div class="row" style="color:var(--text-soft);">${subParts.map(escapeHtml).join(' · ')}</div>`
+        : '';
       return `
         <div class="item-card">
-          <h4>📅 ${escapeHtml(r.date || '日期未定')} ${escapeHtml(r.time || '')}</h4>
-          ${r.location ? `<div class="row">📍 ${escapeHtml(r.location)}</div>` : ''}
-          ${r.outfit ? `<div class="row">👗 服装：${escapeHtml(r.outfit)}</div>` : ''}
-          ${r.notes ? `<div class="row">📝 ${escapeHtml(r.notes)}</div>` : ''}
+          <h4>${escapeHtml(r.date || '日期未定')} ${escapeHtml(r.time || '')}</h4>
+          ${subLine}
+          ${r.notes ? `<div class="row">${escapeHtml(r.notes)}</div>` : ''}
           ${attHtml ? `<div style="margin-top:8px;">${attHtml}</div>` : ''}
           ${myAttHtml}
           ${ownerActions ? `<div class="actions">${ownerActions}</div>` : ''}
@@ -3552,7 +3558,7 @@
     }).join("") : `<div class="empty"><span class="emoji">📅</span><div>还没有排练</div></div>`;
     c.innerHTML = `
       <div class="page-header">
-        <h2 style="font-size:16px;">排练（共 ${list.length} 次）</h2>
+        <h2 style="font-size:16px;">排练 · ${list.length}</h2>
         ${isOwner ? `<button class="btn small" onclick="openRehearsalModal()">+ 添加</button>` : ''}
       </div>
       ${itemsHtml}`;
