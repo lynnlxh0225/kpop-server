@@ -2043,6 +2043,29 @@
   </div>
 </div>
 
+<!-- 申请加入招募 -->
+<div class="modal-bg" id="applyModal">
+  <div class="modal" style="max-width:420px;">
+    <h3>🙋 申请加入</h3>
+    <div id="applyHeader" style="background:var(--primary-soft);color:var(--primary-deep);padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px;"></div>
+    <div class="form-grid">
+      <div>
+        <label class="field">选位置 *</label>
+        <div id="applyPositionChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;"></div>
+        <input id="applyPosition" type="hidden" />
+      </div>
+      <div>
+        <label class="field">附言（可选）</label>
+        <textarea id="applyMessage" placeholder="例如：我跳了 3 年，可以每周日到场" maxlength="300"></textarea>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('applyModal')">取消</button>
+      <button class="btn" id="applySubmitBtn" onclick="submitApplication()">提交申请</button>
+    </div>
+  </div>
+</div>
+
 <!-- 导航 actionSheet -->
 <div class="modal-bg" id="navSheet">
   <div class="modal" style="max-width:380px;">
