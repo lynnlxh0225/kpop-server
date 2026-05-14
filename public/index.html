@@ -4811,6 +4811,10 @@
       note: document.getElementById("actNote").value.trim(),
       agreed_truthful: document.getElementById("actAgreed").checked,
     };
+    // 本地预检 —— 否则 PATCH/POST 必败，按钮点了像没反应
+    if (!body.title) return toast("请填活动名", true);
+    if (!body.city) return toast("请选城市", true);
+    if (!body.date) return toast("请选日期", true);
     if (!body.agreed_truthful) return toast("请先勾选承诺真实", true);
     const btn = document.getElementById("submitActivityBtn");
     const orig = btn.textContent;
@@ -4831,7 +4835,8 @@
         showMyActivities();
       }
     } catch (e) {
-      toast(e.message, true);
+      console.error("submitActivity failed:", e);
+      toast("提交失败：" + e.message, true);
     } finally {
       btn.disabled = false; btn.textContent = orig;
     }
