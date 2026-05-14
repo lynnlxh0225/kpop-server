@@ -1890,91 +1890,120 @@
 <div class="modal-bg" id="perfModal">
   <div class="modal">
     <h3 id="perfModalTitle">添加路演</h3>
-    <!-- 来源选择：从广场选 vs 自己填 -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg);padding:4px;border-radius:10px;">
-      <button type="button" class="btn small ghost" id="perfSrcPlaza" onclick="switchPerfSource('plaza')" style="flex:1;">📌 从广场选</button>
-      <button type="button" class="btn small ghost" id="perfSrcCustom" onclick="switchPerfSource('custom')" style="flex:1;">✏️ 自己填</button>
-    </div>
-    <!-- 广场活动选择（仅 plaza 模式） -->
-    <div id="perfPlazaSection" style="display:none;margin-bottom:12px;">
-      <label class="field">选广场活动</label>
-      <select id="perfActivityId">
-        <option value="">— 加载中 —</option>
-      </select>
-      <p style="font-size:11px;color:var(--text-soft);margin:6px 0 0;">选完会自动填活动名/日期/时间/城市/地点。仍可继续编辑下面的字段，比如装搭和出席。</p>
-    </div>
-    <div class="form-grid">
-      <div>
-        <label class="field">活动名称 *</label>
-        <input id="perfName" placeholder="例如：三里屯太古里随舞" />
+
+    <!-- A 模式：从广场选（默认） -->
+    <div id="perfPlazaSection">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:12px;color:var(--text-soft);">城市</span>
+        <select id="perfPlazaCity" onchange="loadPlazaActivitiesForPerf()" style="padding:4px 10px;font-size:13px;width:auto;flex:0 0 auto;">
+          <option value="北京">北京</option>
+          <option value="上海">上海</option>
+          <option value="广州">广州</option>
+          <option value="深圳">深圳</option>
+          <option value="成都">成都</option>
+          <option value="杭州">杭州</option>
+          <option value="南京">南京</option>
+          <option value="武汉">武汉</option>
+          <option value="西安">西安</option>
+          <option value="重庆">重庆</option>
+        </select>
       </div>
-      <div class="row-2">
-        <div>
-          <label class="field">城市</label>
-          <select id="perfCity">
-            <option value="北京">北京</option>
-            <option value="上海">上海</option>
-            <option value="广州">广州</option>
-            <option value="深圳">深圳</option>
-            <option value="成都">成都</option>
-            <option value="杭州">杭州</option>
-            <option value="南京">南京</option>
-            <option value="武汉">武汉</option>
-            <option value="西安">西安</option>
-            <option value="重庆">重庆</option>
-            <option value="其它">其它</option>
-          </select>
-        </div>
-        <div>
-          <label class="field">日期 *</label>
-          <input id="perfDate" type="date" />
-        </div>
-      </div>
-      <div class="row-2">
-        <div>
-          <label class="field">时间</label>
-          <input id="perfTime" type="time" />
-        </div>
-        <div>
-          <label class="field">状态</label>
-          <select id="perfStatus">
-            <option value="pending_submit">待投稿</option>
-            <option value="submitted">已投稿</option>
-            <option value="approved">已通过</option>
-            <option value="done">已演完</option>
-            <option value="no_show">未演出</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label class="field">地点</label>
-        <input id="perfLocation" placeholder="例如：三里屯太古里南区" />
-      </div>
-      <div>
-        <label class="field">装搭文字描述</label>
-        <input id="perfOutfit" placeholder="原版MV同款 / 黑色练习服 / 学院风..." />
-        <div class="preset-chips" data-target="perfOutfit"></div>
-      </div>
-      <div>
-        <label class="field">装搭参考图（车主整体要求）</label>
-        <div id="perfOutfitImagesBox" class="img-grid"></div>
-        <label class="upload-btn">
-          <input type="file" accept="image/*" multiple style="display:none;" onchange="onPerfImagesPicked(this)" />
-          <span>📷 添加图片</span>
-        </label>
-      </div>
-      <div>
-        <label class="field">备注</label>
-        <textarea id="perfNotes"></textarea>
-      </div>
-      <div>
-        <label class="field">出席预填</label>
-        <div id="perfAttendance" style="border:1px solid var(--border);border-radius:10px;padding:8px;background:#fafafa;"></div>
+      <div id="perfActivityCards" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;"></div>
+      <div style="margin-top:10px;text-align:center;">
+        <a href="#" onclick="event.preventDefault();switchPerfSource('custom');" style="font-size:12px;color:var(--text-soft);text-decoration:underline;">列表里没有？手动添加</a>
       </div>
     </div>
+
+    <!-- B 模式：手动填（默认隐藏） -->
+    <div id="perfCustomSection" style="display:none;">
+      <div style="margin-bottom:10px;">
+        <a href="#" onclick="event.preventDefault();switchPerfSource('plaza');" style="font-size:12px;color:var(--primary);">← 从广场选</a>
+      </div>
+      <div class="form-grid">
+        <div>
+          <label class="field">活动名称 *</label>
+          <input id="perfName" placeholder="例如：三里屯太古里随舞" />
+        </div>
+        <div class="row-2">
+          <div>
+            <label class="field">城市</label>
+            <select id="perfCity">
+              <option value="北京">北京</option>
+              <option value="上海">上海</option>
+              <option value="广州">广州</option>
+              <option value="深圳">深圳</option>
+              <option value="成都">成都</option>
+              <option value="杭州">杭州</option>
+              <option value="南京">南京</option>
+              <option value="武汉">武汉</option>
+              <option value="西安">西安</option>
+              <option value="重庆">重庆</option>
+              <option value="其它">其它</option>
+            </select>
+          </div>
+          <div>
+            <label class="field">日期 *</label>
+            <input id="perfDate" type="date" />
+          </div>
+        </div>
+        <div class="row-2">
+          <div>
+            <label class="field">时间</label>
+            <input id="perfTime" type="time" />
+          </div>
+          <div>
+            <label class="field">地点</label>
+            <input id="perfLocation" placeholder="例如：太古里南区" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 选好/填好后展示：附加信息 -->
+    <div id="perfExtraSection" style="display:none;margin-top:14px;border-top:1px dashed var(--border);padding-top:14px;">
+      <!-- 选定活动的摘要（仅 plaza 模式） -->
+      <div id="perfSelectedSummary" style="display:none;background:var(--primary-soft);color:var(--primary-deep);padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px;"></div>
+      <div class="form-grid">
+        <div class="row-2">
+          <div>
+            <label class="field">状态</label>
+            <select id="perfStatus">
+              <option value="pending_submit">待投稿</option>
+              <option value="submitted">已投稿</option>
+              <option value="approved">已通过</option>
+              <option value="done">已演完</option>
+              <option value="no_show">未演出</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+        <div>
+          <label class="field">装搭</label>
+          <input id="perfOutfit" placeholder="例如：黑色练习服" />
+          <div class="preset-chips" data-target="perfOutfit"></div>
+        </div>
+        <div>
+          <label class="field">装搭参考图</label>
+          <div id="perfOutfitImagesBox" class="img-grid"></div>
+          <label class="upload-btn">
+            <input type="file" accept="image/*" multiple style="display:none;" onchange="onPerfImagesPicked(this)" />
+            <span>📷 添加图片</span>
+          </label>
+        </div>
+        <div>
+          <label class="field">备注</label>
+          <textarea id="perfNotes" placeholder="可选"></textarea>
+        </div>
+        <div>
+          <label class="field">出席</label>
+          <div id="perfAttendance" style="border:1px solid var(--border);border-radius:10px;padding:8px;background:#fafafa;"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
       <button class="btn ghost" onclick="closeModal('perfModal')">取消</button>
-      <button class="btn" onclick="savePerformance()">保存</button>
+      <button class="btn" id="perfSaveBtn" onclick="savePerformance()" disabled>保存</button>
     </div>
   </div>
 </div>
