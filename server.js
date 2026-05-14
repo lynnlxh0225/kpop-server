@@ -28,6 +28,14 @@ const DB_PATH = process.env.DB_PATH || "./data/data.db";
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 // 注册上限：当前用户数 ≥ MAX_USERS 时关闭注册
 const MAX_USERS = parseInt(process.env.MAX_USERS || "50", 10);
+// 管理员邮箱（逗号分隔）：用于广场审核
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "lynnlxh0225@gmail.com")
+  .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+function isAdmin(userId) {
+  if (!userId) return false;
+  const u = db.prepare("SELECT email FROM users WHERE id=?").get(userId);
+  return !!(u && ADMIN_EMAILS.includes((u.email || "").toLowerCase()));
+}
 
 // AI 服务（默认 DeepSeek，OpenAI 兼容协议；可改成通义/Kimi/智谱 等同协议服务）
 const AI_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || "";
