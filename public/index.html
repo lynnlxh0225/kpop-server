@@ -1886,7 +1886,19 @@
       <div class="row-2">
         <div>
           <label class="field">城市</label>
-          <input id="perfCity" placeholder="北京 / 上海" value="北京" />
+          <select id="perfCity">
+            <option value="北京">北京</option>
+            <option value="上海">上海</option>
+            <option value="广州">广州</option>
+            <option value="深圳">深圳</option>
+            <option value="成都">成都</option>
+            <option value="杭州">杭州</option>
+            <option value="南京">南京</option>
+            <option value="武汉">武汉</option>
+            <option value="西安">西安</option>
+            <option value="重庆">重庆</option>
+            <option value="其它">其它</option>
+          </select>
         </div>
         <div>
           <label class="field">日期 *</label>
@@ -1896,7 +1908,7 @@
       <div class="row-2">
         <div>
           <label class="field">时间</label>
-          <input id="perfTime" placeholder="例如：18:00" />
+          <input id="perfTime" type="time" />
         </div>
         <div>
           <label class="field">状态</label>
@@ -1915,7 +1927,8 @@
       </div>
       <div>
         <label class="field">装搭文字描述</label>
-        <input id="perfOutfit" placeholder="例如：原版MV同款黑色练习服" />
+        <input id="perfOutfit" placeholder="原版MV同款 / 黑色练习服 / 学院风..." />
+        <div class="preset-chips" data-target="perfOutfit"></div>
       </div>
       <div>
         <label class="field">装搭参考图（车主整体要求）</label>
