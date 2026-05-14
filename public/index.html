@@ -3666,6 +3666,80 @@
     renderPerfAttendance();
     openModal("perfModal");
   }
+  // 切换路演来源：从广场选 / 自己填
+  function switchPerfSource(mode) {
+    const plaza = document.getElementById("perfSrcPlaza");
+    const custom = document.getElementById("perfSrcCustom");
+    const section = document.getElementById("perfPlazaSection");
+    // toggle 按钮的 active 状态用 ghost / 主色控制
+    if (mode === "plaza") {
+      plaza.classList.remove("ghost");
+      custom.classList.add("ghost");
+      section.style.display = "";
+    } else {
+      plaza.classList.add("ghost");
+      custom.classList.remove("ghost");
+      section.style.display = "none";
+      // 切到自己填 → 清掉关联
+      _perfSelectedActivityId = null;
+    }
+  }
+
+  async function loadPlazaActivitiesForPerf() {
+    const sel = document.getElementById("perfActivityId");
+    if (!sel) return;
+    try {
+      // 拉所有城市（合并几个常见城市的近期）
+      // 简化：默认拉北京，用户能在下拉里搜
+      const r = await API.get(`/activities?city=${encodeURIComponent("北京")}`);
+      _perfPlazaActivities = r.activities || [];
+      // 顺便也拉其他大城市
+      const otherCities = ["上海", "广州", "深圳", "成都", "杭州"];
+      const others = await Promise.all(otherCities.map(c =>
+        API.get(`/activities?city=${encodeURIComponent(c)}`).then(x => x.activities || []).catch(() => [])
+      ));
+      _perfPlazaActivities = _perfPlazaActivities.concat(...others);
+      // 排序 by date
+      _perfPlazaActivities.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      renderPerfActivitySelect();
+    } catch (e) {
+      sel.innerHTML = `<option value="">加载失败 — ${escapeAttr(e.message)}</option>`;
+    }
+  }
+
+  function renderPerfActivitySelect() {
+    const sel = document.getElementById("perfActivityId");
+    const opts = [`<option value="">— 选一个广场活动 —</option>`];
+    for (const a of _perfPlazaActivities) {
+      const themeStr = a.theme ? ` · ${a.theme}` : '';
+      const label = `${a.date} · ${a.city}${themeStr} · ${a.title}`.slice(0, 80);
+      opts.push(`<option value="${a.id}">${escapeHtml(label)}</option>`);
+    }
+    sel.innerHTML = opts.join("");
+    if (_perfSelectedActivityId) sel.value = String(_perfSelectedActivityId);
+    sel.onchange = onPerfActivityChange;
+  }
+
+  function onPerfActivityChange() {
+    const sel = document.getElementById("perfActivityId");
+    const id = parseInt(sel.value, 10);
+    if (!id) {
+      _perfSelectedActivityId = null;
+      return;
+    }
+    const a = _perfPlazaActivities.find(x => x.id === id);
+    if (!a) return;
+    _perfSelectedActivityId = id;
+    // 自动填字段：活动名优先用 theme + title，时间/日期/城市/地点照搬
+    document.getElementById("perfName").value = a.title || "";
+    if (a.city) document.getElementById("perfCity").value = a.city;
+    if (a.date) document.getElementById("perfDate").value = a.date;
+    if (a.time) document.getElementById("perfTime").value = a.time;
+    const loc = [a.district, a.location].filter(Boolean).join(" · ");
+    if (loc) document.getElementById("perfLocation").value = loc;
+    toast(`📌 已从广场填入：${a.title}`);
+  }
+
   function renderPerfAttendance() {
     const s = findSong(currentSongId); if (!s) return;
     const el = document.getElementById("perfAttendance");
