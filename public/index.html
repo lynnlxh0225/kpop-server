@@ -4194,40 +4194,13 @@
 
   // ===================== 好友 =====================
   function renderFriends() {
-    // 好友申请区
-    let reqBox = '';
-    if (state.incomingRequests.length || state.outgoingRequests.length) {
-      const incomingHtml = state.incomingRequests.map(r => `
-        <div class="request-card">
-          <div class="av">${r.from_avatar || '👤'}</div>
-          <div class="info">
-            <div class="name">${escapeHtml(r.from_name)} 想加你为好友</div>
-            <div class="msg">${escapeHtml(r.message || '')}</div>
-          </div>
-          <div class="actions">
-            <button class="btn small" onclick="acceptFriendRequest(${r.id})">✓ 接受</button>
-            <button class="btn small ghost" onclick="rejectFriendRequest(${r.id})">拒绝</button>
-          </div>
-        </div>`).join("");
-      const outgoingHtml = state.outgoingRequests.map(r => `
-        <div class="request-card">
-          <div class="av">${r.to_avatar || '👤'}</div>
-          <div class="info">
-            <div class="name">已向 ${escapeHtml(r.to_name)} 发送申请</div>
-            <div class="msg">等待对方接受</div>
-          </div>
-        </div>`).join("");
-      reqBox = `
-        ${state.incomingRequests.length ? `<h3 style="font-size:14px;margin:0 0 8px;color:var(--pink);">收到的申请（${state.incomingRequests.length}）</h3>${incomingHtml}` : ''}
-        ${state.outgoingRequests.length ? `<h3 style="font-size:14px;margin:14px 0 8px;color:var(--text-soft);">我发出的申请（${state.outgoingRequests.length}）</h3>${outgoingHtml}` : ''}
-        <div style="height:14px;"></div>
-      `;
-    }
-    document.getElementById("friendRequestsBox").innerHTML = reqBox;
+    // 直加方案下不再有 pending 申请。容器保留但置空，便于回滚或老客户端兼容。
+    const reqBox = document.getElementById("friendRequestsBox");
+    if (reqBox) reqBox.innerHTML = '';
 
     const list = document.getElementById("friendList");
     if (!state.friends.length) {
-      list.innerHTML = `<div class="empty"><span class="emoji">👯</span><div>还没有好友，点右上角添加一个吧</div></div>`;
+      list.innerHTML = `<div class="empty"><span class="emoji">👯</span><div>还没有好友</div><div style="font-size:12px;color:var(--text-soft);margin-top:6px;">点右上 + 添加</div></div>`;
       return;
     }
     list.innerHTML = `<div class="friend-grid">${
