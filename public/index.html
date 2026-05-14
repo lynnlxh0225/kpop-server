@@ -2771,14 +2771,14 @@
     }
     const guess = suggestSlots(artist);
     if (guess) {
-      hint.innerHTML = `✨ 识别到 <b>${escapeHtml(guess.name)}</b>（${guess.members.length} 人组合）${_slotsManuallyEdited ? '。已保留你的手动编辑' : '，自动填了位置'}`;
+      hint.innerHTML = `✨ <b>${escapeHtml(guess.name)}</b> · ${guess.members.length} 人${_slotsManuallyEdited ? '（已保留手动编辑）' : '，已自动填位置'}`;
       // 没手动改过 → 直接覆盖；已手动改过 → 不覆盖
       if (!_slotsManuallyEdited) {
         songSlotsDraft = guess.members.slice();
         renderSongSlotsBox();
       }
     } else {
-      hint.innerHTML = `<span style="color:var(--text-soft);">未识别到这个组合，可下面手动加位置（也支持少人版 / 伴舞版）</span>`;
+      hint.innerHTML = `<span style="color:var(--text-soft);">未识别，可手动加位置</span>`;
     }
   }
   // 回车快捷加位置
