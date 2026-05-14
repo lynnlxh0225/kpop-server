@@ -4616,6 +4616,165 @@
     }
   }
 
+  function renderRecruits() {
+    const box = document.getElementById("recruitList");
+    if (!_recruitCache.length) {
+      box.innerHTML = `
+        <div class="empty">
+          <span class="emoji">🙋</span>
+          <div>这个城市暂无招募</div>
+          <div style="font-size:12px;color:var(--text-soft);margin-top:6px;">去「歌曲」详情页开放招募</div>
+        </div>`;
+      return;
+    }
+    box.innerHTML = _recruitCache.map(renderRecruitCard).join("");
+  }
+
+  function renderRecruitCard(r) {
+    const total = r.total_slot_count || (r.all_slots || []).length || 0;
+    const filled = r.active_member_count || 0;
+    const remaining = r.remaining_slots || [];
+    // 进度条
+    const progressW = total > 0 ? Math.round(filled / total * 100) : 0;
+    // 我的状态
+    let action = '';
+    if (r.is_member) {
+      action = `<span style="font-size:12px;color:var(--success);font-weight:600;">✓ 你已加入</span>`;
+    } else if (r.my_application && r.my_application.status === 'pending') {
+      action = `<span style="font-size:12px;color:#92400e;font-weight:600;">⏳ 申请待审核（申请位置：${escapeHtml(r.my_application.position || '?')}）</span>`;
+    } else if (r.reject_count >= 3) {
+      action = `<span style="font-size:12px;color:#9ca3af;">❌ 已被拒 3 次，不能再申请</span>`;
+    } else if (!remaining.length) {
+      action = `<span style="font-size:12px;color:#9ca3af;">位置已占满</span>`;
+    } else {
+      const rejectHint = r.reject_count > 0
+        ? `<span style="font-size:11px;color:#9ca3af;margin-right:6px;">(已被拒 ${r.reject_count}/3)</span>`
+        : '';
+      action = `${rejectHint}<button class="btn small" onclick="openApplyModal(${r.id})">🙋 申请加入</button>`;
+    }
+    // 拒绝原因（如果上次被拒）
+    const lastRejected = r.my_application && r.my_application.status === 'rejected' && r.my_application.reject_reason
+      ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;">上次被拒：${escapeHtml(r.my_application.reject_reason)}</div>`
+      : '';
+    // 开放位置 chips（仍可申请的）
+    const slotsHtml = (r.open_slots || []).map(s => {
+      const isRemaining = remaining.includes(s);
+      return `<span style="font-size:11px;padding:2px 8px;border-radius:6px;${isRemaining ? 'background:var(--primary-soft);color:var(--primary-deep);font-weight:600;' : 'background:#f3f4f6;color:#9ca3af;text-decoration:line-through;'}">${escapeHtml(s)}</span>`;
+    }).join("");
+    return `
+      <div class="item-card" style="margin-bottom:10px;">
+        <h4 style="margin:0 0 4px;font-size:15px;">${escapeHtml(r.title)}</h4>
+        <div style="font-size:12px;color:var(--text-soft);margin-bottom:8px;">${escapeHtml(r.artist || '未知组合')} · ${escapeHtml(r.recruit_city || '')}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="flex:1;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden;">
+            <div style="height:100%;background:var(--primary);width:${progressW}%;"></div>
+          </div>
+          <span style="font-size:12px;color:var(--text-soft);">${filled} / ${total}</span>
+        </div>
+        ${slotsHtml ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${slotsHtml}</div>` : ''}
+        ${r.recruit_note ? `<div style="font-size:12px;color:var(--text-soft);line-height:1.6;background:var(--bg);padding:8px 10px;border-radius:8px;white-space:pre-wrap;">${escapeHtml(r.recruit_note)}</div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--text-soft);">🚗 车主：${r.owner.avatar || '👤'} ${escapeHtml(r.owner.name)}</span>
+          ${action}
+        </div>
+        ${lastRejected}
+      </div>`;
+  }
+
+  // ===================== 申请加入流程 =====================
+  let _applyTargetRecruit = null;
+  function openApplyModal(songId) {
+    const r = _recruitCache.find(x => x.id === songId);
+    if (!r) return toast("找不到这首歌，刷新一下", true);
+    _applyTargetRecruit = r;
+    const remaining = r.remaining_slots || [];
+    if (!remaining.length) return toast("位置已占满", true);
+    document.getElementById("applyHeader").innerHTML = `
+      <div style="font-weight:600;">${escapeHtml(r.title)}</div>
+      <div style="font-size:12px;margin-top:2px;opacity:0.85;">${escapeHtml(r.artist || '')} · 车主 ${r.owner.avatar || '👤'} ${escapeHtml(r.owner.name)}</div>`;
+    document.getElementById("applyMessage").value = "";
+    document.getElementById("applyPosition").value = "";
+    // chips：仅可申请的位置
+    document.getElementById("applyPositionChips").innerHTML = remaining.map((s, i) => `
+      <span class="slot-chip" data-slot="${escapeAttr(s)}" onclick="selectApplyPosition(this, '${escapeAttr(s)}')"
+            style="cursor:pointer;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;">
+        ${escapeHtml(s)}
+      </span>`).join("");
+    openModal("applyModal");
+  }
+
+  function selectApplyPosition(el, slot) {
+    document.querySelectorAll("#applyPositionChips .slot-chip").forEach(c => {
+      c.style.borderColor = "var(--border)";
+      c.style.background = "";
+      c.style.fontWeight = "";
+    });
+    el.style.borderColor = "var(--primary)";
+    el.style.background = "var(--primary-soft)";
+    el.style.fontWeight = "600";
+    document.getElementById("applyPosition").value = slot;
+  }
+
+  async function submitApplication() {
+    const r = _applyTargetRecruit;
+    if (!r) return;
+    const position = document.getElementById("applyPosition").value;
+    const message = document.getElementById("applyMessage").value.trim();
+    if (!position) return toast("请先选一个位置", true);
+    const btn = document.getElementById("applySubmitBtn");
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "提交中...";
+    try {
+      const res = await API.post(`/songs/${r.id}/applications`, { position, message });
+      toast("🙋 " + (res.message || "已提交申请"));
+      closeModal("applyModal");
+      _applyTargetRecruit = null;
+      await loadRecruits();
+    } catch (e) {
+      toast("提交失败：" + e.message, true);
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  // 我的申请列表（弹窗）
+  async function showMyApplications() {
+    try {
+      const r = await API.get("/me/applications");
+      const list = r.applications || [];
+      const old = document.getElementById("myApplicationsModal");
+      if (old) old.remove();
+      const box = document.createElement("div");
+      box.className = "modal-bg active";
+      box.id = "myApplicationsModal";
+      const statusBadge = {
+        pending: '<span class="badge" style="background:#fef3c7;color:#92400e;">待审核</span>',
+        approved: '<span class="badge" style="background:#d1fae5;color:#047857;">已通过</span>',
+        rejected: '<span class="badge" style="background:#fee2e2;color:#b91c1c;">已拒绝</span>',
+        cancelled: '<span class="badge" style="background:#f3f4f6;color:#6b7280;">已关闭</span>',
+      };
+      box.innerHTML = `
+        <div class="modal" style="max-width:480px;">
+          <h3>📋 我的申请（${list.length}）</h3>
+          <div style="max-height:60vh;overflow-y:auto;">
+            ${list.length ? list.map(a => `
+              <div class="item-card" style="margin-bottom:8px;">
+                <h4 style="margin:0 0 4px;font-size:14px;">${escapeHtml(a.title)} ${statusBadge[a.status]||''}</h4>
+                <div style="font-size:12px;color:var(--text-soft);">${escapeHtml(a.artist || '')} · 申请位置：${escapeHtml(a.position || '?')}</div>
+                ${a.message ? `<div style="font-size:12px;color:var(--text-soft);margin-top:4px;">附言：${escapeHtml(a.message)}</div>` : ''}
+                ${a.status === 'rejected' && a.reject_reason ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;">拒绝原因：${escapeHtml(a.reject_reason)}</div>` : ''}
+                ${a.status === 'cancelled' ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px;">车主关闭了招募，申请自动取消</div>` : ''}
+              </div>
+            `).join("") : '<div class="empty"><div>还没有申请过任何歌曲</div></div>'}
+          </div>
+          <div class="footer">
+            <button class="btn ghost" onclick="document.getElementById('myApplicationsModal').remove()">关闭</button>
+          </div>
+        </div>`;
+      document.body.appendChild(box);
+    } catch (e) { toast(e.message, true); }
+  }
+
   // 把活动日期渲染成左侧日历卡片 + diff chip（今天/明天/N 天后）
   function renderActivityDateBlock(iso) {
     const d = new Date(iso + "T00:00:00");
