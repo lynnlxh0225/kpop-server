@@ -4570,18 +4570,9 @@
         </div>`;
       return;
     }
-    // 按日期分组
-    const groups = {};
-    for (const a of _plazaCache) {
-      (groups[a.date] = groups[a.date] || []).push(a);
-    }
-    const dates = Object.keys(groups).sort();
-    list.innerHTML = dates.map(date => `
-      <div style="margin-bottom:18px;">
-        <div style="font-size:13px;color:var(--text-soft);margin-bottom:8px;font-weight:600;">${formatPlazaDate(date)}</div>
-        ${groups[date].map(renderActivityCard).join("")}
-      </div>
-    `).join("");
+    // 按日期升序排列（不再做分组标题，每张卡片左侧有醒目的日历块）
+    const sorted = _plazaCache.slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    list.innerHTML = sorted.map(renderActivityCard).join("");
   }
 
   function formatPlazaDate(iso) {
