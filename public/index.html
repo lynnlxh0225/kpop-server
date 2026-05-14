@@ -2051,6 +2051,30 @@
   </div>
 </div>
 
+<!-- 评价好友 -->
+<div class="modal-bg" id="reviewModal">
+  <div class="modal" style="max-width:420px;">
+    <h3>⭐ 评价 TA</h3>
+    <p style="font-size:12px;color:var(--text-soft);margin:0 0 14px;">真实评价能帮助好友提升。差评匿名展示。</p>
+    <div class="form-grid">
+      <div>
+        <label class="field">打分 *</label>
+        <div id="reviewStars" style="display:flex;gap:6px;margin-top:6px;"></div>
+        <div id="reviewRatingHint" style="font-size:12px;margin-top:6px;color:var(--text-soft);">请打分</div>
+      </div>
+      <div>
+        <label class="field">留言（可选）</label>
+        <textarea id="reviewComment" placeholder="说点具体的，比如「节奏感强 / 总是迟到」" maxlength="200"></textarea>
+        <p style="font-size:11px;color:var(--text-soft);margin:4px 0 0;">含脏话 / 攻击性词汇会被自动屏蔽</p>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('reviewModal')">取消</button>
+      <button class="btn" id="reviewSubmitBtn" onclick="submitReview()">提交</button>
+    </div>
+  </div>
+</div>
+
 <!-- 车主：招募设置 -->
 <div class="modal-bg" id="recruitSettingsModal">
   <div class="modal" style="max-width:480px;">
