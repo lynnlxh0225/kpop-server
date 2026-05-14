@@ -289,6 +289,38 @@ try {
   console.error("users 迁移失败：", e.message);
 }
 
+// activity_interests 表：把主键从 (activity_id, user_id) 改成 (activity_id, user_id, status)
+// 这样一个用户对同一活动能同时表达"我去"和"感兴趣"
+try {
+  // 看现有的主键有几列
+  const idxList = db.prepare("PRAGMA index_list('activity_interests')").all();
+  const pk = idxList.find((i) => i.origin === 'pk');
+  if (pk) {
+    const cols = db.prepare(`PRAGMA index_info('${pk.name}')`).all();
+    if (cols.length === 2) {
+      // 老主键，迁移到 3 列
+      db.exec(`
+        ALTER TABLE activity_interests RENAME TO _old_activity_interests;
+        CREATE TABLE activity_interests (
+          activity_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'going',
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (activity_id, user_id, status),
+          FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        INSERT INTO activity_interests (activity_id, user_id, status, created_at)
+          SELECT activity_id, user_id, status, created_at FROM _old_activity_interests;
+        DROP TABLE _old_activity_interests;
+      `);
+      console.log("🔧 已迁移 activity_interests 主键到 (activity_id, user_id, status)");
+    }
+  }
+} catch (e) {
+  console.error("activity_interests 迁移失败：", e.message);
+}
+
 // activities 表加 6 个真实公告字段
 try {
   const aCols = db.prepare("PRAGMA table_info(activities)").all();
