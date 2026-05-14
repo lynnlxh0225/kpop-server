@@ -1577,10 +1577,7 @@
         <input id="newDanceTagInput" placeholder="例如：主舞担" maxlength="20" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addDanceTag();}" />
         <button class="btn small ghost" onclick="addDanceTag()">+ 加</button>
       </div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-        <span style="font-size:11px;color:var(--text-soft);">推荐：</span>
-        ${['主舞担','rap 担','vocal 担','队长','门面','可周末练','可工作日晚练','能跳男团','能跳女团','灵活档期','直拍能 c','气氛担当'].map(t => `<span class="slot-chip" style="cursor:pointer;font-size:11px;" onclick="quickAddDanceTag('${t.replace(/'/g, "\\'")}')">${t}</span>`).join("")}
-      </div>
+      <div id="recommendedTagsBox" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;"></div>
     </div>
     <div class="setting-card">
       <h3>📆 日历订阅</h3>
