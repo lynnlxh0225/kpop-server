@@ -2318,12 +2318,13 @@ app.patch("/api/activities/:id", authRequired, (req, res) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "日期格式应为 YYYY-MM-DD" });
   // 编辑模式不再校验"日期 < 今天"：旧活动也可能需要修订（订正历史记录）
 
+  // 注意：reject_reason 列是 NOT NULL，重置成空字符串而不是 NULL；reviewed_at 允许 NULL
   db.prepare(`
     UPDATE activities SET
       title=?, city=?, district=?, date=?, time=?, location=?,
       theme=?, organizer=?, submit_deadline=?, submit_email=?, submit_info=?, highlights=?,
       songs=?, source_url=?, note=?,
-      status='pending', reject_reason=NULL, reviewed_at=NULL
+      status='pending', reject_reason='', reviewed_at=NULL
     WHERE id=?
   `).run(
     title.slice(0, 100),
