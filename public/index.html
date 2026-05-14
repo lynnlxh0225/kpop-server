@@ -4825,30 +4825,55 @@
   }
 
   // ===================== 好友详情（看 ta 跳的舞） =====================
+  let _currentFriendDetail = null;
   async function openFriendDetail(uid) {
     switchTab("friend-detail");
     document.getElementById("friendDetailHeader").innerHTML = `<div style="color:var(--text-soft);font-size:13px;">加载中…</div>`;
     document.getElementById("friendSongsList").innerHTML = "";
     try {
-      const r = await API.get(`/friends/${uid}/songs`);
-      renderFriendDetail(r.friend, r.songs || []);
+      const [songsResp, reviewsResp] = await Promise.all([
+        API.get(`/friends/${uid}/songs`),
+        API.get(`/users/${uid}/reviews`).catch(() => ({ reviews: [], count: 0, average: 0 })),
+      ]);
+      _currentFriendDetail = { friend: songsResp.friend, songs: songsResp.songs || [], reviews: reviewsResp };
+      renderFriendDetail(_currentFriendDetail.friend, _currentFriendDetail.songs, _currentFriendDetail.reviews);
     } catch (e) {
       document.getElementById("friendDetailHeader").innerHTML = `<div style="color:var(--danger);">加载失败：${escapeHtml(e.message)}</div>`;
     }
   }
 
-  function renderFriendDetail(friend, songs) {
+  function renderFriendDetail(friend, songs, reviewsResp) {
+    const isMe = friend.id === state.user.id;
     const active = songs.filter(s => s.friend_role === 'active' || s.friend_role === 'owner');
     const left = songs.filter(s => s.friend_role === 'left');
     const overlap = active.filter(s => s.is_overlap);
     const onlyTa = active.filter(s => !s.is_overlap);
 
+    // 自我标签 chips
+    const tags = friend.dance_tags || [];
+    const tagsHtml = tags.length
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${tags.map(t => `<span style="font-size:11px;background:var(--primary-soft);color:var(--primary-deep);padding:2px 8px;border-radius:6px;font-weight:600;">${escapeHtml(t)}</span>`).join("")}</div>`
+      : '';
+    // 评价摘要
+    const avg = reviewsResp ? reviewsResp.average || 0 : 0;
+    const cnt = reviewsResp ? reviewsResp.count || 0 : 0;
+    const starsHtml = avg > 0
+      ? `<div style="margin-top:6px;font-size:13px;">${renderStars(avg)} <span style="color:var(--text-soft);font-size:12px;">${avg} · ${cnt} 条</span></div>`
+      : `<div style="margin-top:6px;font-size:12px;color:var(--text-soft);">还没有人评价</div>`;
+    // 评价按钮（自己看自己不能评）
+    const reviewBtn = !isMe
+      ? `<button class="btn small" onclick="openReviewModal(${friend.id})" style="margin-top:8px;">⭐ 评价 TA</button>`
+      : '';
+
     document.getElementById("friendDetailHeader").innerHTML = `
-      <div style="display:flex;gap:14px;align-items:center;">
+      <div style="display:flex;gap:14px;align-items:flex-start;">
         <span style="font-size:42px;">${friend.avatar || '👤'}</span>
-        <div>
+        <div style="flex:1;min-width:0;">
           <h2 style="margin:0;font-size:20px;">${escapeHtml(friend.name)}</h2>
           <div style="font-size:13px;color:var(--text-soft);margin-top:4px;">${active.length} 首在跳${left.length ? ' · ' + left.length + ' 首历史' : ''}</div>
+          ${tagsHtml}
+          ${starsHtml}
+          ${reviewBtn}
         </div>
       </div>
     `;
@@ -4859,11 +4884,126 @@
         ${list.map(renderFriendSongCard).join("")}
       </div>` : '';
 
-    document.getElementById("friendSongsList").innerHTML = !songs.length
+    // 评价 section
+    const reviewsList = (reviewsResp && reviewsResp.reviews) || [];
+    const positiveReviews = reviewsList.filter(r => !r.is_negative);
+    const negativeReviews = reviewsList.filter(r => r.is_negative);
+    const reviewsSection = reviewsList.length
+      ? `
+        <div style="margin-top:18px;">
+          <h3 style="font-size:14px;color:var(--text-soft);margin:0 0 8px;font-weight:600;">⭐ 好评（${positiveReviews.length}）</h3>
+          ${positiveReviews.length ? positiveReviews.map(renderReviewCard).join("") : '<div style="font-size:12px;color:var(--text-soft);margin-bottom:8px;">暂无</div>'}
+          ${negativeReviews.length ? `
+            <h3 style="font-size:14px;color:var(--text-soft);margin:14px 0 8px;font-weight:600;">🕶️ 匿名差评（${negativeReviews.length}）</h3>
+            ${negativeReviews.map(renderReviewCard).join("")}
+          ` : ''}
+        </div>`
+      : '';
+
+    document.getElementById("friendSongsList").innerHTML = (!songs.length
       ? `<div class="empty"><span class="emoji">🎵</span><div>${escapeHtml(friend.name)} 还没有跳过歌</div></div>`
       : sectionHtml("我们一起在跳", overlap, "💞")
       + sectionHtml("只 ta 在跳", onlyTa, "🎤")
-      + sectionHtml("历史（已退出）", left, "📦");
+      + sectionHtml("历史（已退出）", left, "📦"))
+      + reviewsSection;
+  }
+
+  function renderStars(value) {
+    const full = Math.floor(value);
+    const half = (value - full) >= 0.5 ? 1 : 0;
+    const empty = 5 - full - half;
+    return '⭐'.repeat(full) + (half ? '✨' : '') + '☆'.repeat(empty);
+  }
+
+  function renderReviewCard(r) {
+    const isAnon = r.is_negative && !r.mine;
+    const stars = '⭐'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+    const ago = friendlyAgo(r.created_at);
+    const mineMark = r.mine ? '<span style="font-size:11px;color:var(--primary);margin-left:4px;">（我写的）</span>' : '';
+    const undoBtn = r.mine
+      ? `<button class="btn ghost small" style="margin-left:auto;" onclick="undoReview(${r.id})">撤回</button>`
+      : '';
+    return `
+      <div class="item-card" style="margin-bottom:8px;${r.is_negative ? 'background:#fafafa;border-color:#e5e7eb;' : ''}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:18px;">${r.reviewer.avatar || '👤'}</span>
+          <span style="font-weight:600;font-size:13px;">${escapeHtml(r.reviewer.name)}</span>
+          ${mineMark}
+          <span style="font-size:13px;">${stars}</span>
+          <span style="font-size:11px;color:var(--text-soft);margin-left:auto;">${ago}</span>
+          ${undoBtn}
+        </div>
+        ${r.comment ? `<div style="font-size:13px;color:var(--text);margin-top:6px;">${escapeHtml(r.comment)}</div>` : ''}
+      </div>`;
+  }
+
+  function friendlyAgo(ts) {
+    if (!ts) return '';
+    const diff = Date.now() - ts;
+    if (diff < 60 * 1000) return '刚刚';
+    if (diff < 3600 * 1000) return Math.floor(diff / 60000) + ' 分钟前';
+    if (diff < 86400 * 1000) return Math.floor(diff / 3600000) + ' 小时前';
+    if (diff < 7 * 86400 * 1000) return Math.floor(diff / 86400000) + ' 天前';
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  // ============ 评价 modal ============
+  let _reviewTargetId = null;
+  let _reviewRating = 0;
+  function openReviewModal(uid) {
+    _reviewTargetId = uid;
+    _reviewRating = 0;
+    document.getElementById("reviewComment").value = "";
+    renderReviewStars();
+    updateReviewHint();
+    openModal("reviewModal");
+  }
+  function setReviewStar(n) {
+    _reviewRating = n;
+    renderReviewStars();
+    updateReviewHint();
+  }
+  function renderReviewStars() {
+    const box = document.getElementById("reviewStars");
+    box.innerHTML = [1,2,3,4,5].map(n => `
+      <span onclick="setReviewStar(${n})" style="font-size:30px;cursor:pointer;line-height:1;">${n <= _reviewRating ? '⭐' : '☆'}</span>
+    `).join("");
+  }
+  function updateReviewHint() {
+    const hint = document.getElementById("reviewRatingHint");
+    if (_reviewRating === 0) hint.textContent = "请打分";
+    else if (_reviewRating <= 2) hint.innerHTML = `<span style="color:#b91c1c;">⚠️ 差评：会匿名展示，且 24h 只能发 1 条</span>`;
+    else if (_reviewRating === 3) hint.innerHTML = `<span style="color:#92400e;">中评：会显示你的名字</span>`;
+    else hint.innerHTML = `<span style="color:#047857;">好评：会显示你的名字</span>`;
+  }
+
+  async function submitReview() {
+    if (!_reviewTargetId) return;
+    if (!_reviewRating) return toast("请先打分", true);
+    const comment = document.getElementById("reviewComment").value.trim();
+    const btn = document.getElementById("reviewSubmitBtn");
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "提交中...";
+    try {
+      await API.post(`/users/${_reviewTargetId}/reviews`, { rating: _reviewRating, comment });
+      toast("✓ 评价已提交");
+      closeModal("reviewModal");
+      openFriendDetail(_reviewTargetId);
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  async function undoReview(id) {
+    if (!confirm("撤回这条评价？")) return;
+    try {
+      await API.del(`/reviews/${id}`);
+      toast("已撤回");
+      if (_currentFriendDetail) openFriendDetail(_currentFriendDetail.friend.id);
+    } catch (e) { toast(e.message, true); }
   }
 
   function renderFriendSongCard(s) {
