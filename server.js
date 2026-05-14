@@ -436,11 +436,14 @@ function now() { return Date.now(); }
 function sign(uid) { return jwt.sign({ uid }, JWT_SECRET, { expiresIn: "30d" }); }
 function publicUser(u) {
   if (!u) return null;
-  return { id: u.id, name: u.name, avatar: u.avatar };
+  return { id: u.id, name: u.name, avatar: u.avatar, dance_tags: parseTagsSafe(u.dance_tags) };
 }
 function fullUser(u) {
   if (!u) return null;
-  return { id: u.id, email: u.email, name: u.name, avatar: u.avatar, invite_code: u.invite_code, created_at: u.created_at };
+  return { id: u.id, email: u.email, name: u.name, avatar: u.avatar, invite_code: u.invite_code, created_at: u.created_at, dance_tags: parseTagsSafe(u.dance_tags) };
+}
+function parseTagsSafe(raw) {
+  try { const a = JSON.parse(raw || "[]"); return Array.isArray(a) ? a : []; } catch { return []; }
 }
 function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || ""); }
 
