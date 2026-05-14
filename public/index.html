@@ -2490,12 +2490,8 @@
     const r = await API.get("/friends");
     state.friends = r.friends || [];
   }
-  async function loadRequests() {
-    const r = await API.get("/friend-requests");
-    state.incomingRequests = r.incoming || [];
-    state.outgoingRequests = r.outgoing || [];
-    document.getElementById("friendsDot").style.display = state.incomingRequests.length ? "" : "none";
-  }
+  // loadRequests 在直加方案下不再需要（保留 stub 以防其它地方调用）
+  async function loadRequests() { /* noop in direct-add mode */ }
   async function loadSongs() {
     const r = await API.get("/songs");
     state.songs = r.songs || [];
