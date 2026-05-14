@@ -2140,14 +2140,19 @@ app.get("/api/activities", authRequired, (req, res) => {
       JOIN users u ON u.id = ai.user_id
       WHERE ai.activity_id=?
     `).all(r.id);
-    const mine = interests.find((x) => x.user_id === req.userId);
+    const uniqueUsers = new Set(interests.map((x) => x.user_id));
+    const goingUsers = new Set(interests.filter((x) => x.status === "going").map((x) => x.user_id));
+    const interestedUsers = new Set(interests.filter((x) => x.status === "interested").map((x) => x.user_id));
+    const myStatuses = interests.filter((x) => x.user_id === req.userId).map((x) => x.status);
     return {
       ...r,
       submitter: { id: r.submitter_id, name: r.submitter_name, avatar: r.submitter_avatar },
       submitter_name: undefined, submitter_avatar: undefined,
-      interests_count: interests.length,
-      going_count: interests.filter((x) => x.status === "going").length,
-      my_interest: mine ? mine.status : null,
+      interests_count: uniqueUsers.size,       // 总参与人数（去重）
+      going_count: goingUsers.size,            // 选了"我去"的人数
+      interested_count: interestedUsers.size,  // 选了"感兴趣"的人数（独立计）
+      my_interests: myStatuses,                // 数组：可以含 going / interested 一两个
+      my_interest: myStatuses[0] || null,      // 兼容旧前端
     };
   });
   res.json({ activities, city, today });
