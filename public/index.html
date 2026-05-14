@@ -4416,18 +4416,15 @@
   }
 
   // 打开发活动 modal
+  const _actFields = [
+    "actTitle", "actOrganizer", "actTheme", "actDistrict",
+    "actDate", "actTime", "actLocation", "actHighlights",
+    "actSubmitDeadline", "actSubmitEmail", "actSubmitInfo",
+    "actSourceUrl", "actNote", "actAiText",
+  ];
   function openSubmitActivityModal() {
-    // 清空表单
-    document.getElementById("actTitle").value = "";
+    _actFields.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
     document.getElementById("actCity").value = document.getElementById("plazaCity").value || "北京";
-    document.getElementById("actDistrict").value = "";
-    document.getElementById("actDate").value = "";
-    document.getElementById("actTime").value = "";
-    document.getElementById("actLocation").value = "";
-    document.getElementById("actSongs").value = "";
-    document.getElementById("actSourceUrl").value = "";
-    document.getElementById("actNote").value = "";
-    document.getElementById("actAiText").value = "";
     document.getElementById("actAgreed").checked = false;
     openModal("submitActivityModal");
   }
@@ -4435,12 +4432,17 @@
   async function submitActivity() {
     const body = {
       title: document.getElementById("actTitle").value.trim(),
+      organizer: document.getElementById("actOrganizer").value.trim(),
+      theme: document.getElementById("actTheme").value.trim(),
       city: document.getElementById("actCity").value,
       district: document.getElementById("actDistrict").value.trim(),
       date: document.getElementById("actDate").value,
       time: document.getElementById("actTime").value.trim(),
       location: document.getElementById("actLocation").value.trim(),
-      songs: document.getElementById("actSongs").value.trim(),
+      highlights: document.getElementById("actHighlights").value.trim(),
+      submit_deadline: document.getElementById("actSubmitDeadline").value.trim(),
+      submit_email: document.getElementById("actSubmitEmail").value.trim(),
+      submit_info: document.getElementById("actSubmitInfo").value.trim(),
       source_url: document.getElementById("actSourceUrl").value.trim(),
       note: document.getElementById("actNote").value.trim(),
       agreed_truthful: document.getElementById("actAgreed").checked,
