@@ -1380,6 +1380,38 @@
     <div id="friendSongsList"></div>
   </section>
 
+  <!-- 随舞广场 -->
+  <section class="page" id="page-plaza">
+    <div class="page-header">
+      <h2>🌍 随舞广场</h2>
+      <button class="btn" onclick="openSubmitActivityModal()">+ 发活动</button>
+    </div>
+
+    <!-- 城市切换 + 管理员入口 -->
+    <div class="setting-card" style="padding:12px 16px;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <label class="field" style="margin:0;min-width:auto;">城市</label>
+        <select id="plazaCity" onchange="loadPlaza()" style="flex:1;min-width:160px;">
+          <option value="北京">北京</option>
+          <option value="上海">上海</option>
+          <option value="广州">广州</option>
+          <option value="深圳">深圳</option>
+          <option value="成都">成都</option>
+          <option value="杭州">杭州</option>
+          <option value="南京">南京</option>
+          <option value="武汉">武汉</option>
+          <option value="西安">西安</option>
+          <option value="重庆">重庆</option>
+          <option value="其它">其它</option>
+        </select>
+        <button class="btn ghost small" id="adminReviewBtn" onclick="openAdminReview()" style="display:none;">🔍 待审核 (<span id="adminPendingCount">0</span>)</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-soft);margin:8px 0 0;">💡 这里是用户提交的随机舞蹈活动公告，过期自动隐藏。<a onclick="showMyActivities()" style="color:var(--primary);cursor:pointer;">查看我提交的</a></p>
+    </div>
+
+    <div id="plazaList" style="margin-top:14px;"></div>
+  </section>
+
   <!-- 整理消息（待确认队列）—— 不在 tab 显示，从歌曲页跳过来 -->
   <section class="page" id="page-inbox">
     <button class="back-btn" onclick="switchTab('songs')">← 返回歌曲</button>
