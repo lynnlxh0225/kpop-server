@@ -1652,6 +1652,83 @@
   </div>
 </div>
 
+<!-- 发活动到广场 -->
+<div class="modal-bg" id="submitActivityModal">
+  <div class="modal">
+    <h3>+ 发活动到随舞广场</h3>
+    <details style="margin-bottom:12px;">
+      <summary style="cursor:pointer;font-size:13px;color:var(--primary);">📥 从小红书 / 微信原文 AI 提取</summary>
+      <div style="margin-top:8px;">
+        <textarea id="actAiText" placeholder="把小红书帖子全文 / 群消息原文粘进来，AI 自动填字段..." style="min-height:80px;"></textarea>
+        <button class="btn small" onclick="aiExtractActivity()" style="margin-top:6px;">✨ AI 解析</button>
+        <p style="font-size:11px;color:var(--text-soft);margin:6px 0 0;">解析后字段会填到下面，你可以核对修改再提交</p>
+      </div>
+    </details>
+    <div class="form-grid">
+      <div>
+        <label class="field">活动名 *</label>
+        <input id="actTitle" placeholder="例如：三里屯太古里随舞 / 五道口随舞 vol.7" />
+      </div>
+      <div class="row-2">
+        <div>
+          <label class="field">城市 *</label>
+          <select id="actCity">
+            <option value="北京">北京</option>
+            <option value="上海">上海</option>
+            <option value="广州">广州</option>
+            <option value="深圳">深圳</option>
+            <option value="成都">成都</option>
+            <option value="杭州">杭州</option>
+            <option value="南京">南京</option>
+            <option value="武汉">武汉</option>
+            <option value="西安">西安</option>
+            <option value="重庆">重庆</option>
+            <option value="其它">其它</option>
+          </select>
+        </div>
+        <div>
+          <label class="field">区 / 街道</label>
+          <input id="actDistrict" placeholder="朝阳 / 海淀 ..." />
+        </div>
+      </div>
+      <div class="row-2">
+        <div>
+          <label class="field">日期 *</label>
+          <input id="actDate" type="date" />
+        </div>
+        <div>
+          <label class="field">时间</label>
+          <input id="actTime" placeholder="14:00-17:00 / 周六下午" />
+        </div>
+      </div>
+      <div>
+        <label class="field">具体地点</label>
+        <input id="actLocation" placeholder="例如：三里屯太古里南区中心广场" />
+      </div>
+      <div>
+        <label class="field">歌单</label>
+        <input id="actSongs" placeholder="Whiplash / Maestro / 多首歌用 / 隔开" />
+      </div>
+      <div>
+        <label class="field">来源链接</label>
+        <input id="actSourceUrl" placeholder="小红书帖子 / 微博 / 公众号链接（可选）" />
+      </div>
+      <div>
+        <label class="field">备注</label>
+        <textarea id="actNote" placeholder="报名方式、活动方联系、注意事项..." style="min-height:50px;"></textarea>
+      </div>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-soft);cursor:pointer;line-height:1.5;">
+        <input type="checkbox" id="actAgreed" style="margin:3px 0 0;flex-shrink:0;" />
+        <span>我承诺以上信息真实，不发布广告 / 虚假活动；活动信息归原活动方所有，本站仅做汇集展示</span>
+      </label>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('submitActivityModal')">取消</button>
+      <button class="btn" onclick="submitActivity()" id="submitActivityBtn">提交审核</button>
+    </div>
+  </div>
+</div>
+
 <!-- 屏外渲染容器：用来给 html2canvas 截图，position fixed 在屏幕外 -->
 <div id="shareCardOffscreen" style="position:fixed;left:-10000px;top:0;pointer-events:none;z-index:-1;"></div>
 
