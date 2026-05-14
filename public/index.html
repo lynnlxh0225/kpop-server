@@ -4277,18 +4277,36 @@
     const sourceLink = a.source_url
       ? `<a href="${escapeAttr(a.source_url)}" target="_blank" rel="noopener" style="color:var(--primary);font-size:12px;">来源 ↗</a>`
       : '';
+    // 投稿截止：是否已过 / 近 24h
+    let deadlineBadge = '';
+    if (a.submit_deadline) {
+      deadlineBadge = `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-weight:600;">📮 截 ${escapeHtml(a.submit_deadline)}</span>`;
+    }
+    const themeBadge = a.theme
+      ? `<span style="font-size:11px;background:var(--primary-soft);color:var(--primary-deep);padding:2px 8px;border-radius:6px;font-weight:600;">🎵 ${escapeHtml(a.theme)}</span>`
+      : '';
+    const organizerLine = a.organizer
+      ? `<div style="font-size:12px;color:var(--text-soft);margin-top:2px;">${escapeHtml(a.organizer)}</div>` : '';
     return `
       <div class="item-card" style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div style="flex:1;min-width:0;">
             <h4 style="margin:0 0 4px;font-size:15px;">🎤 ${escapeHtml(a.title)}</h4>
-            <div style="font-size:12px;color:var(--text-soft);line-height:1.7;">
+            ${organizerLine}
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+              ${themeBadge}
+              ${deadlineBadge}
+            </div>
+            <div style="font-size:12px;color:var(--text-soft);line-height:1.7;margin-top:6px;">
               ${a.time ? `⏰ ${escapeHtml(a.time)}` : ''}
               ${a.location ? `<br>📍 ${escapeHtml(a.location)}${a.district ? ` (${escapeHtml(a.district)})` : ''}` : a.district ? `<br>📍 ${escapeHtml(a.district)}` : ''}
+              ${a.highlights ? `<br>✨ ${escapeHtml(a.highlights)}` : ''}
+              ${a.submit_email ? `<br>📮 投稿邮箱 <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">${escapeHtml(a.submit_email)}</code>` : ''}
+              ${a.submit_info ? `<br><details style="margin-top:4px;"><summary style="cursor:pointer;color:var(--primary);">投稿要求 / 格式</summary><div style="white-space:pre-wrap;padding:6px 0;">${escapeHtml(a.submit_info)}</div></details>` : ''}
               ${a.songs ? `<br>🎵 ${escapeHtml(a.songs)}` : ''}
               ${a.note ? `<br>📝 ${escapeHtml(a.note)}` : ''}
             </div>
-            <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <span style="font-size:11px;color:var(--text-soft);">${a.submitter && a.submitter.avatar || '👤'} ${escapeHtml(a.submitter ? a.submitter.name : '?')} 提交</span>
               ${sourceLink}
             </div>
