@@ -2043,6 +2043,45 @@
   </div>
 </div>
 
+<!-- 车主：招募设置 -->
+<div class="modal-bg" id="recruitSettingsModal">
+  <div class="modal" style="max-width:480px;">
+    <h3 id="recruitModalTitle">开放招募</h3>
+    <p style="font-size:12px;color:var(--text-soft);margin:0 0 14px;">开启后这首歌会出现在「广场 → 招募」里，别人可申请加入。</p>
+    <div class="form-grid">
+      <div>
+        <label class="field">招募城市 *</label>
+        <select id="recruitCity">
+          <option value="北京">北京</option>
+          <option value="上海">上海</option>
+          <option value="广州">广州</option>
+          <option value="深圳">深圳</option>
+          <option value="成都">成都</option>
+          <option value="杭州">杭州</option>
+          <option value="南京">南京</option>
+          <option value="武汉">武汉</option>
+          <option value="西安">西安</option>
+          <option value="重庆">重庆</option>
+          <option value="其它">其它</option>
+        </select>
+      </div>
+      <div>
+        <label class="field">开放哪些位置 *</label>
+        <div id="recruitSlotsBox" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;"></div>
+        <p style="font-size:11px;color:var(--text-soft);margin:4px 0 0;">已被占的位置不能勾选</p>
+      </div>
+      <div>
+        <label class="field">招募说明（可选）</label>
+        <textarea id="recruitNote" placeholder="例如：每周日下午在望京练 2 小时，6 月底打算去三里屯路演" maxlength="500"></textarea>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn ghost" onclick="closeModal('recruitSettingsModal')">取消</button>
+      <button class="btn" id="recruitSaveBtn" onclick="saveRecruitSettings()">开启招募</button>
+    </div>
+  </div>
+</div>
+
 <!-- 申请加入招募 -->
 <div class="modal-bg" id="applyModal">
   <div class="modal" style="max-width:420px;">
