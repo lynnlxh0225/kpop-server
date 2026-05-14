@@ -5447,7 +5447,8 @@
     t.classList.toggle("error", !!isError);
     t.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+    // 错误信息显示久一点（4.5s），避免用户没看到就消失
+    toastTimer = setTimeout(() => t.classList.remove("show"), isError ? 4500 : 2400);
   }
   document.getElementById("login-password").addEventListener("keypress", e => { if (e.key === "Enter") doLogin(); });
   document.getElementById("reg-invite").addEventListener("keypress", e => { if (e.key === "Enter") doRegister(); });
