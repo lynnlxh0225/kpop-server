@@ -1485,8 +1485,28 @@ async function callAI(messages, opts = {}) {
     });
     console.error(`[AI 错误] status=${res.status} req=${reqDump}`);
     console.error(`[AI 错误] body=${text.slice(0, 1500)}`);
-    const err = new Error(`AI 服务返回 ${res.status}：${text.slice(0, 400)}`);
-    err.statusCode = 502;
+
+    // 解析智谱常见错误码，给用户更友好的提示
+    let friendlyMsg = `AI 服务返回 ${res.status}：${text.slice(0, 200)}`;
+    let statusCode = 502;
+    try {
+      const errBody = JSON.parse(text);
+      const code = errBody.error && errBody.error.code;
+      if (res.status === 429 || code === "1302") {
+        friendlyMsg = "AI 服务太忙了 🐢 等 20-30 秒再试（智谱账户级速率限制，与你无关）";
+        statusCode = 429;
+      } else if (code === "1301") {
+        friendlyMsg = "AI 账户余额不足，请管理员去 platform.deepseek.com / open.bigmodel.cn 充值";
+        statusCode = 402;
+      } else if (code === "1210") {
+        friendlyMsg = "AI 调用参数错误（模型名或请求格式不对），请联系管理员";
+        statusCode = 502;
+      } else if (errBody.error && errBody.error.message) {
+        friendlyMsg = `AI 错误：${errBody.error.message}`;
+      }
+    } catch {}
+    const err = new Error(friendlyMsg);
+    err.statusCode = statusCode;
     throw err;
   }
   const data = await res.json();
