@@ -4519,7 +4519,48 @@
 
   // ===================== 随舞广场 =====================
   let _plazaCache = []; // 最近一次拉的活动列表
+  let _recruitCache = []; // 招募列表
   let _isAdmin = false;
+  let _plazaSub = "activity"; // activity | recruit
+
+  // 二级 tab 切换
+  function switchPlazaSub(sub) {
+    _plazaSub = sub;
+    document.querySelectorAll(".plaza-subtabs [data-plaza-sub]").forEach(b => {
+      const active = b.dataset.plazaSub === sub;
+      b.classList.toggle("ghost", !active);
+    });
+    document.getElementById("plazaList").style.display = sub === "activity" ? "" : "none";
+    document.getElementById("recruitList").style.display = sub === "recruit" ? "" : "none";
+    // 顶栏按钮 + 右上链接随 sub 切换
+    const addBtn = document.getElementById("plazaAddBtn");
+    const subLink = document.getElementById("plazaSubLink");
+    if (sub === "activity") {
+      addBtn.textContent = "+ 发活动";
+      addBtn.onclick = () => onPlazaAddClick();
+      subLink.innerHTML = `<a onclick="showMyActivities()" style="color:var(--primary);cursor:pointer;">我提交的活动 →</a>`;
+    } else {
+      addBtn.textContent = "+ 开招募";
+      addBtn.onclick = () => onPlazaAddClick();
+      subLink.innerHTML = `<a onclick="showMyApplications()" style="color:var(--primary);cursor:pointer;">我的申请 →</a>`;
+    }
+    // 拉对应数据（如果首次进 recruit）
+    if (sub === "recruit" && !_recruitCache.length) loadRecruits();
+  }
+
+  // 顶栏 + 按钮根据当前 sub 决定行为
+  function onPlazaAddClick() {
+    if (_plazaSub === "activity") {
+      openSubmitActivityModal();
+    } else {
+      // 招募是在歌曲详情页操作的，引导用户去歌曲页
+      toast("去「歌曲」选一首你是车主的歌，里面有「开放招募」入口");
+    }
+  }
+  function onPlazaCityChange() {
+    if (_plazaSub === "activity") loadPlaza();
+    else loadRecruits();
+  }
 
   async function loadPlaza() {
     const city = document.getElementById("plazaCity").value || "北京";
@@ -4535,6 +4576,20 @@
       await refreshAdminBadge();
     } catch (e) {
       list.innerHTML = `<div class="empty"><div>加载失败：${escapeHtml(e.message)}</div></div>`;
+    }
+  }
+
+  async function loadRecruits() {
+    const city = document.getElementById("plazaCity").value || "北京";
+    try { localStorage.setItem("kpop_plaza_city", city); } catch {}
+    const box = document.getElementById("recruitList");
+    box.innerHTML = `<div class="empty" style="padding:24px;color:var(--text-soft);">加载中...</div>`;
+    try {
+      const r = await API.get(`/recruits?city=${encodeURIComponent(city)}`);
+      _recruitCache = r.recruits || [];
+      renderRecruits();
+    } catch (e) {
+      box.innerHTML = `<div class="empty"><div>加载失败：${escapeHtml(e.message)}</div></div>`;
     }
   }
 
