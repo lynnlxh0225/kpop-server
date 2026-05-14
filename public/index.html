@@ -4429,12 +4429,48 @@
   }
 
   // 用 AI 从小红书原文里提字段（复用 /api/parse 的 prompt 思路，但简化为活动场景）
+  let _aiExtractCooldownUntil = 0;
+  let _aiExtractTimer = null;
+
+  function getAiExtractBtn() {
+    // 找到「✨ AI 解析」按钮
+    return [...document.querySelectorAll("#submitActivityModal button")]
+      .find(b => /AI 解析/.test(b.textContent || ""));
+  }
+
+  function startAiExtractCooldown(seconds) {
+    _aiExtractCooldownUntil = Date.now() + seconds * 1000;
+    const btn = getAiExtractBtn();
+    if (!btn) return;
+    btn.disabled = true;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((_aiExtractCooldownUntil - Date.now()) / 1000));
+      if (left <= 0) {
+        btn.disabled = false;
+        btn.innerHTML = "✨ AI 解析";
+        clearInterval(_aiExtractTimer);
+        _aiExtractTimer = null;
+      } else {
+        btn.innerHTML = `🐢 等 ${left}s`;
+      }
+    };
+    tick();
+    if (_aiExtractTimer) clearInterval(_aiExtractTimer);
+    _aiExtractTimer = setInterval(tick, 1000);
+  }
+
   async function aiExtractActivity() {
     const text = document.getElementById("actAiText").value.trim();
     if (!text) return toast("请先粘贴原文", true);
-    toast("✨ AI 解析中…");
+    if (Date.now() < _aiExtractCooldownUntil) {
+      const wait = Math.ceil((_aiExtractCooldownUntil - Date.now()) / 1000);
+      return toast(`AI 还在冷却中 🐢 等 ${wait} 秒`, true);
+    }
+    const btn = getAiExtractBtn();
+    const original = btn ? btn.innerHTML : null;
+    if (btn) { btn.disabled = true; btn.innerHTML = "🤔 AI 解析中..."; }
+    toast("✨ AI 解析中…（约 5-10 秒）");
     try {
-      // 直接复用一个新的辅助路由 /api/activities/ai-extract
       const r = await API.post("/activities/ai-extract", { text });
       if (r.title)      document.getElementById("actTitle").value = r.title;
       if (r.city && Array.from(document.getElementById("actCity").options).some(o => o.value === r.city)) {
@@ -4448,7 +4484,18 @@
       if (r.source_url) document.getElementById("actSourceUrl").value = r.source_url;
       if (r.note)       document.getElementById("actNote").value = r.note;
       toast("✅ 字段已填，请核对");
-    } catch (e) { toast("AI 解析失败：" + e.message, true); }
+      if (btn) { btn.disabled = false; btn.innerHTML = original || "✨ AI 解析"; }
+    } catch (e) {
+      // 429（速率限制）→ 启动 30 秒冷却
+      const msg = e.message || "";
+      if (msg.includes("429") || msg.includes("速率限制") || msg.includes("太忙") || msg.includes("控制请求频率")) {
+        toast("🐢 AI 服务太忙，30 秒后会自动解锁", true);
+        startAiExtractCooldown(30);
+      } else {
+        toast("AI 解析失败：" + msg, true);
+        if (btn) { btn.disabled = false; btn.innerHTML = original || "✨ AI 解析"; }
+      }
+    }
   }
 
   // 看我提交的（弹窗显示）
