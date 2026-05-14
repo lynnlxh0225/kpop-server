@@ -2662,7 +2662,7 @@
   function renderSongs() {
     const list = document.getElementById("songList");
     if (!state.songs.length) {
-      list.innerHTML = `<div class="empty"><span class="emoji">🎵</span><div>还没有歌曲，点右上角新建一首吧～</div></div>`;
+      list.innerHTML = `<div class="empty"><span class="emoji">🎵</span><div>还没有歌曲</div><div style="font-size:12px;color:var(--text-soft);margin-top:6px;">点右上 + 新建</div></div>`;
       return;
     }
     const html = state.songs.map(s => {
@@ -2670,23 +2670,24 @@
       const rehCount = (s.rehearsals || []).length;
       const perfCount = (s.performances || []).filter(p => p.status !== 'no_show').length;
       let roleBadge = '';
-      if (!s.claimed) roleBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;">🙋 待认领</span>';
-      else if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">🚗 我是车主</span>';
-      else if (s.my_role === 'member') roleBadge = '<span class="badge role-member">🚪 已加入</span>';
+      if (!s.claimed) roleBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;">待认领</span>';
+      else if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">车主</span>';
+      else if (s.my_role === 'member') roleBadge = '<span class="badge role-member">已加入</span>';
       else roleBadge = '<span class="badge role-left">已退出</span>';
-      const privateMark = s.private ? '<span class="badge" style="background:#fef3c7;color:#92400e;">🔒 私密</span>' : '';
+      const privateMark = s.private ? '<span class="badge" style="background:#fef3c7;color:#92400e;">🔒</span>' : '';
+      // 只在有数据时显示计数 badge
+      const counts = [];
+      if (activeTeam.length) counts.push(`<span class="badge team">👥 ${activeTeam.length}</span>`);
+      if (rehCount) counts.push(`<span class="badge rehear">📅 ${rehCount}</span>`);
+      if (perfCount) counts.push(`<span class="badge perf">🎤 ${perfCount}</span>`);
       return `
         <div class="song-card ${s.my_role === 'left' ? 'left' : ''}" onclick="openSongDetail(${s.id})">
           <div class="title">${escapeHtml(s.title)}</div>
-          <div class="artist">${escapeHtml(s.artist || "未知组合")}</div>
-          <div class="owner-line">🚗 车主：${escapeHtml(s.owner ? s.owner.name : '?')}</div>
+          <div class="artist">${escapeHtml(s.artist || "未知组合")}${s.owner ? ' · ' + escapeHtml(s.owner.name) : ''}</div>
           <div class="badges">
             ${roleBadge}
             ${privateMark}
-            <span class="badge type">${s.type === 'new' ? '新歌' : '经典'}</span>
-            <span class="badge team">👥 ${activeTeam.length} 人</span>
-            <span class="badge rehear">📅 ${rehCount} 排</span>
-            <span class="badge perf">🎤 ${perfCount} 演</span>
+            ${counts.join('')}
           </div>
         </div>`;
     }).join("");
