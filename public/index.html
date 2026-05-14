@@ -5326,22 +5326,29 @@
 
   // ===================== 导航 =====================
   // 点击排练/路演的地点 → 弹出 actionSheet 选地图 App
-  // 各家地图都支持地名直接传中文，地图 App 内自己模糊匹配
+  // 用各家「搜索接口」而不是「路径规划接口」：因为 directions/routeplan 通常要求经纬度，
+  // 只传地名时目的地框是空的；而 search 接口能稳定显示地名，用户点一下结果再发起导航。
   function openNavSheet(location, city) {
     const loc = (location || "").trim();
     if (!loc) return toast("没有地点信息", true);
-    // 拼接 city + location 提升匹配准确度（地图 App 跨城市搜索时会带城市过滤）
-    const dest = city && !loc.includes(city) ? `${city}${loc}` : loc;
-    const encoded = encodeURIComponent(dest);
+    // 拼接城市帮助跨城去重；预览也展示完整
+    const dest = city && !loc.includes(city) ? `${city} ${loc}` : loc;
+    const encLoc = encodeURIComponent(loc);
+    const encDest = encodeURIComponent(dest);
+    const encCity = city ? encodeURIComponent(city) : '';
     const targets = [
-      { name: "高德地图",  icon: "🧭", color: "#1e6cdb",
-        url: `https://uri.amap.com/navigation?to=${encoded}&mode=car&callnative=1&src=kpop-server` },
-      { name: "百度地图",  icon: "📍", color: "#3385ff",
-        url: `https://api.map.baidu.com/direction?destination=${encoded}&mode=driving&output=html&src=webapp.kpop` },
-      { name: "腾讯地图",  icon: "🗺️", color: "#00b96b",
-        url: `https://apis.map.qq.com/uri/v1/routeplan?type=drive&to=${encoded}&referer=kpop-server` },
-      { name: "苹果地图",  icon: "🍎", color: "#000",
-        url: `http://maps.apple.com/?daddr=${encoded}&dirflg=d` },
+      // 高德：URI search 直接定位地点，右下角"路线"按钮一键导航
+      { name: "高德地图", icon: "🧭",
+        url: `https://uri.amap.com/search?keyword=${encLoc}${encCity ? '&city=' + encCity : ''}&src=kpop-server` },
+      // 百度：place/search 对纯地名比 direction 友好；region 必填，没城市时用"全国"
+      { name: "百度地图", icon: "📍",
+        url: `https://api.map.baidu.com/place/search?query=${encLoc}&region=${encCity || encodeURIComponent('全国')}&output=html&src=webapp.kpop` },
+      // 腾讯：search 接口支持地名 + 区域提示
+      { name: "腾讯地图", icon: "🗺️",
+        url: `https://apis.map.qq.com/uri/v1/search?keyword=${encLoc}${encCity ? '&region=' + encCity : ''}&referer=kpop-server` },
+      // 苹果地图：q 是通用搜索词，匹配最稳；打开后点一下"路线"开始导航
+      { name: "苹果地图", icon: "🍎",
+        url: `https://maps.apple.com/?q=${encDest}` },
     ];
     document.getElementById("navSheetDest").textContent = "📍 " + dest;
     document.getElementById("navSheetOptions").innerHTML = targets.map(t => `
@@ -5352,7 +5359,7 @@
                 font-size:14px;font-weight:600;">
         <span style="font-size:20px;">${t.icon}</span>
         <span>${escapeHtml(t.name)}</span>
-        <span style="margin-left:auto;color:var(--text-soft);font-size:12px;">打开 →</span>
+        <span style="margin-left:auto;color:var(--text-soft);font-size:12px;">搜索 →</span>
       </a>`).join("");
     openModal("navSheet");
   }
