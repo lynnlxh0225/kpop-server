@@ -4626,13 +4626,15 @@
     if (/直拍/.test(t)) fac.push("个人直拍");
     if (fac.length) r.highlights = fac.join(" / ");
 
-    // -------- 具体地点（找"地点"/"于"/"地址"关键词附近的文字）--------
-    let locM = t.match(/(?:地点|于|地址)[:：]?\s*([^\n，。,；;]{2,30})/);
-    if (locM) r.location = locM[1].trim();
-    // 备用：找"X层中庭"/"X广场"
+    // -------- 具体地点（优先匹配"地点"/"地址"关键字，停在标点 / 括号 / 数字前）--------
+    let locM = t.match(/(?:地点|地址)(?:于|[:：])?\s*([^\n（(\[，。,；;]{2,30})/);
+    if (locM && locM[1] && !/^\d/.test(locM[1])) {
+      r.location = locM[1].trim();
+    }
+    // 备用：找"X层中庭"/"X广场"/"X商场"等典型场所词
     if (!r.location) {
-      let locM2 = t.match(/([一-龥\w]{2,15}(?:一层|二层|三层|中庭|广场|商场|大厦|练习室|studio))/i);
-      if (locM2) r.location = locM2[1];
+      let locM2 = t.match(/([一-龥\w]{2,15}(?:一层|二层|三层|中庭|广场|商场|大厦|练习室|studio|mall))/i);
+      if (locM2) r.location = locM2[1].trim();
     }
 
     // -------- 活动名（取第一行带 DANCE / 路演 / 随舞 / 期 的句子）--------
