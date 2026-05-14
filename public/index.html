@@ -4607,22 +4607,37 @@
           ${a.source_url ? `<div style="margin-top:4px;"><a href="${escapeAttr(a.source_url)}" target="_blank" rel="noopener" style="color:var(--primary);">来源 ↗</a></div>` : ''}
         </div>
       </details>` : '';
-    // 主要信息：title + 一行核心信息（时间 + 地点） + theme/截止 chip + 操作行
-    const chips = [];
-    if (a.theme) chips.push(`<span style="font-size:11px;background:var(--primary-soft);color:var(--primary-deep);padding:1px 8px;border-radius:6px;font-weight:600;">${escapeHtml(a.theme)}</span>`);
-    if (a.submit_deadline) chips.push(`<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 8px;border-radius:6px;font-weight:600;">📮 ${escapeHtml(a.submit_deadline)}</span>`);
-    const locLine = [a.time && `⏰ ${a.time}`, a.location && `📍 ${a.location}${a.district ? ` (${a.district})` : ''}`].filter(Boolean).map(escapeHtml).join(' · ');
+    // 主题 chip（主要 chip 区，截止单独一行以避免与活动时间混淆）
+    const themeChip = a.theme
+      ? `<span style="font-size:11px;background:var(--primary-soft);color:var(--primary-deep);padding:1px 8px;border-radius:6px;font-weight:600;">${escapeHtml(a.theme)}</span>`
+      : '';
+    // 活动时间放在标题下面，加粗（区分于"投稿截止"）
+    const timeLine = a.time
+      ? `<div style="font-size:13px;color:var(--text);font-weight:600;margin-top:3px;">⏰ ${escapeHtml(a.time)}</div>`
+      : '';
+    const locLine = (a.location || a.district)
+      ? `<div style="font-size:12px;color:var(--text-soft);margin-top:2px;">📍 ${escapeHtml(a.location || '')}${a.location && a.district ? ` (${escapeHtml(a.district)})` : (a.district ? escapeHtml(a.district) : '')}</div>`
+      : '';
+    // 投稿截止：单独一行 + 完整文字"投稿截止"前缀，跟活动时间分开避免误读
+    const deadlineLine = a.submit_deadline
+      ? `<div style="font-size:12px;background:#fef3c7;color:#92400e;border-radius:6px;padding:4px 8px;margin-top:6px;display:inline-block;">📮 投稿截止：${escapeHtml(a.submit_deadline)}</div>`
+      : '';
     return `
-      <div class="item-card" style="margin-bottom:10px;">
-        <h4 style="margin:0 0 4px;font-size:15px;">${escapeHtml(a.title)}</h4>
-        ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">${chips.join('')}</div>` : ''}
-        ${locLine ? `<div style="font-size:12px;color:var(--text-soft);">${locLine}</div>` : ''}
-        ${detailsHtml}
-        <div style="margin-top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-          <button class="btn small ${myGoing ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'going')">${myGoing ? '✓ 我去' : '我去'}</button>
-          <button class="btn small ${myInterested ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'interested')">${myInterested ? '✓ 想去' : '想去'}</button>
-          ${a.going_count ? `<span style="font-size:12px;color:var(--text-soft);margin-left:4px;">${a.going_count} 人去</span>` : ''}
-          ${interestedCount ? `<span style="font-size:12px;color:var(--text-soft);">${a.going_count ? '·' : ''} ${interestedCount} 想</span>` : ''}
+      <div class="item-card" style="margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;">
+        ${renderActivityDateBlock(a.date)}
+        <div style="flex:1;min-width:0;">
+          <h4 style="margin:0;font-size:15px;line-height:1.3;">${escapeHtml(a.title)}</h4>
+          ${themeChip ? `<div style="margin-top:4px;">${themeChip}</div>` : ''}
+          ${timeLine}
+          ${locLine}
+          ${deadlineLine}
+          ${detailsHtml}
+          <div style="margin-top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button class="btn small ${myGoing ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'going')">${myGoing ? '✓ 我去' : '我去'}</button>
+            <button class="btn small ${myInterested ? '' : 'ghost'}" onclick="toggleInterest(${a.id}, 'interested')">${myInterested ? '✓ 想去' : '想去'}</button>
+            ${a.going_count ? `<span style="font-size:12px;color:var(--text-soft);margin-left:4px;">${a.going_count} 人去</span>` : ''}
+            ${interestedCount ? `<span style="font-size:12px;color:var(--text-soft);">${a.going_count ? '·' : ''} ${interestedCount} 想</span>` : ''}
+          </div>
         </div>
       </div>`;
   }
