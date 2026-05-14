@@ -2033,6 +2033,143 @@ app.post("/api/upload", authRequired, uploadLimiter, (req, res) => {
   });
 });
 
+// ==================== 随舞广场 ====================
+const VALID_CITIES = new Set(["北京", "上海", "广州", "深圳", "成都", "杭州", "南京", "武汉", "西安", "重庆", "其它"]);
+
+// 公开列表：未过期 + 已审核（按城市过滤 + 可选时间范围）
+app.get("/api/activities", authRequired, (req, res) => {
+  const city = (req.query.city || "北京").toString();
+  const today = todayStr();
+  const rows = db.prepare(`
+    SELECT a.*, u.name AS submitter_name, u.avatar AS submitter_avatar
+    FROM activities a
+    JOIN users u ON u.id = a.submitter_id
+    WHERE a.status='approved' AND a.city=? AND a.date >= ?
+    ORDER BY a.date ASC, a.created_at DESC
+    LIMIT 200
+  `).all(city, today);
+
+  // 拼上每个活动的兴趣信息
+  const activities = rows.map((r) => {
+    const interests = db.prepare(`
+      SELECT ai.user_id, ai.status, u.name, u.avatar
+      FROM activity_interests ai
+      JOIN users u ON u.id = ai.user_id
+      WHERE ai.activity_id=?
+    `).all(r.id);
+    const mine = interests.find((x) => x.user_id === req.userId);
+    return {
+      ...r,
+      submitter: { id: r.submitter_id, name: r.submitter_name, avatar: r.submitter_avatar },
+      submitter_name: undefined, submitter_avatar: undefined,
+      interests_count: interests.length,
+      going_count: interests.filter((x) => x.status === "going").length,
+      my_interest: mine ? mine.status : null,
+    };
+  });
+  res.json({ activities, city, today });
+});
+
+// 提交活动（status=pending，等审核）
+app.post("/api/activities", authRequired, (req, res) => {
+  const b = req.body || {};
+  const title = (b.title || "").toString().trim();
+  const city = (b.city || "").toString().trim();
+  const date = (b.date || "").toString().trim();
+  if (!title) return res.status(400).json({ error: "请填活动名" });
+  if (!city || !VALID_CITIES.has(city)) return res.status(400).json({ error: "城市不在列表里" });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "日期格式应为 YYYY-MM-DD" });
+  if (date < todayStr()) return res.status(400).json({ error: "日期不能早于今天" });
+  if (!b.agreed_truthful) return res.status(400).json({ error: "需要勾选「我承诺信息真实」" });
+
+  const id = db.prepare(`
+    INSERT INTO activities (title, city, district, date, time, location, songs, source_url, note, submitter_id, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+  `).run(
+    title.slice(0, 100),
+    city,
+    (b.district || "").toString().slice(0, 50),
+    date,
+    (b.time || "").toString().slice(0, 50),
+    (b.location || "").toString().slice(0, 200),
+    (b.songs || "").toString().slice(0, 500),
+    (b.source_url || "").toString().slice(0, 500),
+    (b.note || "").toString().slice(0, 500),
+    req.userId,
+    now()
+  ).lastInsertRowid;
+  res.json({ id, status: "pending", message: "已提交，等管理员审核（一般 24h 内）" });
+});
+
+// 我去 / 感兴趣（toggle）
+app.post("/api/activities/:id/interest", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const status = req.body && req.body.status;
+  if (!["going", "interested"].includes(status)) {
+    return res.status(400).json({ error: "status 不合法" });
+  }
+  const a = db.prepare("SELECT id, status FROM activities WHERE id=?").get(id);
+  if (!a) return res.status(404).json({ error: "活动不存在" });
+  if (a.status !== "approved") return res.status(403).json({ error: "活动暂未公开" });
+  db.prepare(`
+    INSERT INTO activity_interests (activity_id, user_id, status, created_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT(activity_id, user_id) DO UPDATE SET status=excluded.status
+  `).run(id, req.userId, status, now());
+  res.json({ ok: true, status });
+});
+
+app.delete("/api/activities/:id/interest", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  db.prepare("DELETE FROM activity_interests WHERE activity_id=? AND user_id=?").run(id, req.userId);
+  res.json({ ok: true });
+});
+
+// 我提交的活动（看自己提交了什么、状态如何）
+app.get("/api/activities/mine", authRequired, (req, res) => {
+  const rows = db.prepare(`
+    SELECT * FROM activities WHERE submitter_id=? ORDER BY created_at DESC LIMIT 50
+  `).all(req.userId);
+  res.json({ activities: rows });
+});
+
+// ===== 管理员（仅 ADMIN_EMAILS 用户）=====
+function requireAdmin(req, res, next) {
+  if (!isAdmin(req.userId)) return res.status(403).json({ error: "需要管理员权限" });
+  next();
+}
+
+app.get("/api/admin/activities/pending", authRequired, requireAdmin, (req, res) => {
+  const rows = db.prepare(`
+    SELECT a.*, u.name AS submitter_name, u.email AS submitter_email
+    FROM activities a
+    JOIN users u ON u.id = a.submitter_id
+    WHERE a.status='pending'
+    ORDER BY a.created_at ASC
+    LIMIT 100
+  `).all();
+  res.json({ activities: rows, count: rows.length });
+});
+
+app.post("/api/admin/activities/:id/approve", authRequired, requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const r = db.prepare("UPDATE activities SET status='approved', reviewed_at=? WHERE id=? AND status='pending'").run(now(), id);
+  if (r.changes === 0) return res.status(404).json({ error: "活动不存在或已审核" });
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/activities/:id/reject", authRequired, requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const reason = (req.body && req.body.reason || "").toString().slice(0, 200);
+  const r = db.prepare("UPDATE activities SET status='rejected', reject_reason=?, reviewed_at=? WHERE id=? AND status='pending'").run(reason, now(), id);
+  if (r.changes === 0) return res.status(404).json({ error: "活动不存在或已审核" });
+  res.json({ ok: true });
+});
+
+// 我是不是管理员（前端用）
+app.get("/api/me/is-admin", authRequired, (req, res) => {
+  res.json({ is_admin: isAdmin(req.userId) });
+});
+
 // ==================== 错误处理 ====================
 app.use((err, req, res, next) => {
   console.error(err);
