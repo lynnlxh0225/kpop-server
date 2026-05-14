@@ -284,6 +284,20 @@ try {
     db.exec("ALTER TABLE songs ADD COLUMN claimed INTEGER NOT NULL DEFAULT 1");
     console.log("🔧 已为旧 songs 表补 claimed 列（默认全部视为已认领）");
   }
+  // 招募相关 5 个列（v3 加的）
+  const recruitCols = [
+    ["recruiting", "INTEGER NOT NULL DEFAULT 0"],
+    ["recruit_note", "TEXT NOT NULL DEFAULT ''"],
+    ["recruit_open_slots", "TEXT NOT NULL DEFAULT '[]'"],
+    ["recruit_city", "TEXT NOT NULL DEFAULT ''"],
+    ["recruit_started_at", "INTEGER"],
+  ];
+  for (const [name, type] of recruitCols) {
+    if (!sCols.some((c) => c.name === name)) {
+      db.exec(`ALTER TABLE songs ADD COLUMN ${name} ${type}`);
+      console.log(`🔧 已为旧 songs 表补 ${name} 列`);
+    }
+  }
 } catch (e) {
   console.error("songs 迁移失败：", e.message);
 }
