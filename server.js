@@ -191,6 +191,39 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_items(user_id, status);
 
+  -- 随舞广场：用户提交的随机舞蹈活动
+  CREATE TABLE IF NOT EXISTS activities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    city TEXT NOT NULL DEFAULT '北京',
+    district TEXT NOT NULL DEFAULT '',
+    date TEXT NOT NULL,           -- YYYY-MM-DD
+    time TEXT NOT NULL DEFAULT '',
+    location TEXT NOT NULL DEFAULT '',
+    songs TEXT NOT NULL DEFAULT '',         -- 歌单（自由文本）
+    source_url TEXT NOT NULL DEFAULT '',    -- 来源链接（小红书 / 微博等）
+    note TEXT NOT NULL DEFAULT '',
+    submitter_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- pending | approved | rejected
+    reject_reason TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    reviewed_at INTEGER,
+    FOREIGN KEY (submitter_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_act_city_date ON activities(city, date);
+  CREATE INDEX IF NOT EXISTS idx_act_status ON activities(status);
+
+  -- 用户对活动的兴趣表达
+  CREATE TABLE IF NOT EXISTS activity_interests (
+    activity_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'going',  -- going | interested
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (activity_id, user_id),
+    FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   -- 每日 AI 配额计数：防止单用户一夜烧光 API key
   CREATE TABLE IF NOT EXISTS daily_usage (
     user_id INTEGER NOT NULL,
