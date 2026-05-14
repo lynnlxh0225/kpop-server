@@ -263,12 +263,16 @@ try {
   console.error("songs 迁移失败：", e.message);
 }
 
-// 老版本数据库迁移：performances 表加 outfit_images 列
+// 老版本数据库迁移：performances 表加 outfit_images / activity_id 列
 try {
   const cols = db.prepare("PRAGMA table_info(performances)").all();
   if (!cols.some((c) => c.name === "outfit_images")) {
     db.exec("ALTER TABLE performances ADD COLUMN outfit_images TEXT NOT NULL DEFAULT '[]'");
     console.log("🔧 已为旧 performances 表补 outfit_images 列");
+  }
+  if (!cols.some((c) => c.name === "activity_id")) {
+    db.exec("ALTER TABLE performances ADD COLUMN activity_id INTEGER");
+    console.log("🔧 已为旧 performances 表补 activity_id 列");
   }
 } catch (e) {
   console.error("迁移失败：", e.message);
