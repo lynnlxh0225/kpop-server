@@ -3232,6 +3232,12 @@
     const s = findSong(currentSongId); if (!s) return;
     addMemberSelected = null;
     document.getElementById("newMemberPosition").value = prefillPosition || "";
+    // 位置 datalist：当前歌曲的所有 slot
+    const memberPosDL = document.getElementById("memberPosOptions");
+    if (memberPosDL) {
+      const slots = Array.isArray(s.position_slots) ? s.position_slots : [];
+      memberPosDL.innerHTML = slots.map((p) => `<option value="${escapeAttr(p)}">`).join("");
+    }
 
     const activeTeam = (s.team || []).filter(t => t.status === 'active');
     const activeIds = new Set(activeTeam.map(t => t.user_id));
