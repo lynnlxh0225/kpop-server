@@ -33,6 +33,8 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "lynnlxh0225@gmail.com")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 function isAdmin(userId) {
   if (!userId) return false;
+  // 兜底：user_id=1（网站第一个注册用户）永远是 admin
+  if (userId === 1) return true;
   const u = db.prepare("SELECT email FROM users WHERE id=?").get(userId);
   return !!(u && ADMIN_EMAILS.includes((u.email || "").toLowerCase()));
 }
