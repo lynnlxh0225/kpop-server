@@ -1730,13 +1730,18 @@
       </div>
       <div class="row-2">
         <div>
-          <label class="field">投稿截止</label>
-          <input id="actSubmitDeadline" placeholder="5.13 23:00" />
+          <label class="field">投稿截止 日期</label>
+          <input id="actSubmitDeadlineDate" type="date" />
         </div>
         <div>
-          <label class="field">投稿邮箱</label>
-          <input id="actSubmitEmail" placeholder="xxx@xxx.com" />
+          <label class="field">投稿截止 时间</label>
+          <input id="actSubmitDeadlineTime" type="time" />
         </div>
+      </div>
+      <input id="actSubmitDeadline" type="hidden" />
+      <div>
+        <label class="field">投稿邮箱</label>
+        <input id="actSubmitEmail" type="email" placeholder="xxx@xxx.com" autocomplete="email" />
       </div>
       <div>
         <label class="field">投稿要求 / 格式</label>
