@@ -922,59 +922,38 @@ app.get("/api/friend-requests", authRequired, (req, res) => {
   res.json({ incoming, outgoing });
 });
 
-// 用对方邀请码发起好友申请
+// 用对方邀请码直接互加好友（v2：邀请码本身就是准入凭证，不再走 pending 流程）
+// 想拒绝陌生人加自己 → 刷邀请码（POST /api/auth/regenerate-invite）即可让所有未传给"信任的人"的邀请码失效
 app.post("/api/friend-requests", authRequired, (req, res) => {
-  const { code, message } = req.body || {};
+  const { code } = req.body || {};
   if (!code) return res.status(400).json({ error: "请填写邀请码" });
   const target = db.prepare("SELECT * FROM users WHERE invite_code=?").get(code.trim().toUpperCase());
   if (!target) return res.status(404).json({ error: "邀请码无效" });
   if (target.id === req.userId) return res.status(400).json({ error: "不能添加自己" });
   if (areFriends(req.userId, target.id)) return res.status(409).json({ error: "你们已经是好友了" });
-  // 已有 pending 请求？
-  const existing = db.prepare(`
-    SELECT * FROM friend_requests
-    WHERE from_user_id=? AND to_user_id=? AND status='pending'
-  `).get(req.userId, target.id);
-  if (existing) return res.status(409).json({ error: "已发送过申请，等待对方处理" });
-  // 对方先发过来，反向 pending？直接接受变成好友
-  const reverse = db.prepare(`
-    SELECT * FROM friend_requests
-    WHERE from_user_id=? AND to_user_id=? AND status='pending'
-  `).get(target.id, req.userId);
-  if (reverse) {
-    db.prepare("UPDATE friend_requests SET status='accepted', responded_at=? WHERE id=?")
-      .run(now(), reverse.id);
-    addFriendship(req.userId, target.id);
-    return res.json({ accepted: true, friend: publicUser(target) });
-  }
+  // 直接互加
+  addFriendship(req.userId, target.id);
+  // 把过去任何 pending 的双向申请都置为 accepted（清理历史脏数据）
   db.prepare(`
-    INSERT INTO friend_requests (from_user_id, to_user_id, status, message, created_at)
-    VALUES (?, ?, 'pending', ?, ?)
-  `).run(req.userId, target.id, (message || "").toString().slice(0, 200), now());
-  res.json({ sent: true, target: publicUser(target) });
+    UPDATE friend_requests SET status='accepted', responded_at=?
+    WHERE status='pending' AND
+      ((from_user_id=? AND to_user_id=?) OR (from_user_id=? AND to_user_id=?))
+  `).run(now(), req.userId, target.id, target.id, req.userId);
+  res.json({ accepted: true, friend: publicUser(target) });
 });
 
+// 旧的 incoming/outgoing 申请收件箱（保留作为历史只读视图，前端不再调用）
+app.get("/api/friend-requests", authRequired, (req, res) => {
+  // 直加方案下不再有 pending，返回空数组避免老客户端报错
+  res.json({ incoming: [], outgoing: [] });
+});
+
+// 旧 accept/reject 路由保留作 noop 兼容（防止 deploy 过渡期老客户端报 404）
 app.post("/api/friend-requests/:id/accept", authRequired, (req, res) => {
-  const reqId = parseInt(req.params.id, 10);
-  const r = db.prepare("SELECT * FROM friend_requests WHERE id=?").get(reqId);
-  if (!r) return res.status(404).json({ error: "申请不存在" });
-  if (r.to_user_id !== req.userId) return res.status(403).json({ error: "无权操作" });
-  if (r.status !== "pending") return res.status(400).json({ error: "申请已处理" });
-  db.prepare("UPDATE friend_requests SET status='accepted', responded_at=? WHERE id=?")
-    .run(now(), reqId);
-  addFriendship(r.from_user_id, r.to_user_id);
-  res.json({ ok: true });
+  res.json({ ok: true, deprecated: true });
 });
-
 app.post("/api/friend-requests/:id/reject", authRequired, (req, res) => {
-  const reqId = parseInt(req.params.id, 10);
-  const r = db.prepare("SELECT * FROM friend_requests WHERE id=?").get(reqId);
-  if (!r) return res.status(404).json({ error: "申请不存在" });
-  if (r.to_user_id !== req.userId) return res.status(403).json({ error: "无权操作" });
-  if (r.status !== "pending") return res.status(400).json({ error: "申请已处理" });
-  db.prepare("UPDATE friend_requests SET status='rejected', responded_at=? WHERE id=?")
-    .run(now(), reqId);
-  res.json({ ok: true });
+  res.json({ ok: true, deprecated: true });
 });
 
 // 用邀请码查询用户信息（用于显示对方信息）
