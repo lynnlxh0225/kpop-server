@@ -506,6 +506,24 @@
     border-radius: 3px;
   }
 
+  /* ============ 预设 chips（装搭等） ============ */
+  .preset-chips {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+  }
+  .preset-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .preset-chip:hover, .preset-chip:active {
+    background: var(--primary-soft);
+    color: var(--primary-deep);
+    border-color: var(--primary);
+  }
+
   /* ============ 位置占位 chips ============ */
   .slot-chips {
     display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px;
