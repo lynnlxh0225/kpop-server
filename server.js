@@ -286,6 +286,27 @@ try {
   console.error("users 迁移失败：", e.message);
 }
 
+// activities 表加 6 个真实公告字段
+try {
+  const aCols = db.prepare("PRAGMA table_info(activities)").all();
+  const needs = [
+    ["theme", "TEXT NOT NULL DEFAULT ''"],
+    ["organizer", "TEXT NOT NULL DEFAULT ''"],
+    ["submit_deadline", "TEXT NOT NULL DEFAULT ''"],
+    ["submit_email", "TEXT NOT NULL DEFAULT ''"],
+    ["submit_info", "TEXT NOT NULL DEFAULT ''"],
+    ["highlights", "TEXT NOT NULL DEFAULT ''"],
+  ];
+  for (const [name, type] of needs) {
+    if (!aCols.some((c) => c.name === name)) {
+      db.exec(`ALTER TABLE activities ADD COLUMN ${name} ${type}`);
+      console.log(`🔧 已为旧 activities 表补 ${name} 列`);
+    }
+  }
+} catch (e) {
+  console.error("activities 迁移失败：", e.message);
+}
+
 // 路演 status 枚举迁移：旧 planned/confirmed/canceled → 新 pending_submit/approved/no_show（done 保留）
 try {
   const r1 = db.prepare("UPDATE performances SET status='pending_submit' WHERE status='planned'").run();
