@@ -3884,6 +3884,8 @@
       _perfPlazaActivities = r.activities || [];
       _perfPlazaActivities.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
       renderPerfActivityCards();
+      // 数据回来后再刷一遍 summary（拿到更新过的标题/时间/城市）
+      if (_perfSelectedActivityId) renderPerfSelectedSummary();
     } catch (e) {
       box.innerHTML = `<div class="empty" style="padding:20px;">加载失败：${escapeHtml(e.message)}</div>`;
     }
