@@ -3525,10 +3525,14 @@
     const r = id ? (s.rehearsals || []).find(x => x.id === id) : null;
     document.getElementById("rehearsalModalTitle").textContent = id ? "编辑排练" : "添加排练";
     document.getElementById("rehDate").value = r?.date || "";
+    const [rFrom, rTo] = parseTimeRange(r?.time);
+    document.getElementById("rehTimeFrom").value = rFrom || "";
+    document.getElementById("rehTimeTo").value = rTo || "";
     document.getElementById("rehTime").value = r?.time || "";
     document.getElementById("rehLocation").value = r?.location || "";
     document.getElementById("rehOutfit").value = r?.outfit || "";
     document.getElementById("rehNotes").value = r?.notes || "";
+    renderOutfitChips();
     // 出席：已存在的取已存在的；否则用 active 队伍成员默认 maybe
     const activeMembers = (s.team || []).filter(t => t.status === 'active');
     if (r && r.attendance && r.attendance.length) {
