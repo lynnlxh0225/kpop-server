@@ -4328,28 +4328,28 @@
   }
 
   async function toggleInterest(activityId, status) {
+    const a = _plazaCache.find(x => x.id === activityId);
+    if (!a) return;
+    const myInterests = Array.isArray(a.my_interests) ? a.my_interests : (a.my_interest ? [a.my_interest] : []);
+    const has = myInterests.includes(status);
     try {
-      const a = _plazaCache.find(x => x.id === activityId);
-      if (a && a.my_interest === status) {
-        await API.del(`/activities/${activityId}/interest`);
-        a.my_interest = null;
-        if (status === 'going') { a.going_count = Math.max(0, a.going_count - 1); a.interests_count = Math.max(0, a.interests_count - 1); }
-        else { a.interests_count = Math.max(0, a.interests_count - 1); }
+      if (has) {
+        await API.del(`/activities/${activityId}/interest?status=${status}`);
+        const next = myInterests.filter(s => s !== status);
+        a.my_interests = next;
+        a.my_interest = next[0] || null;
+        if (status === 'going') a.going_count = Math.max(0, (a.going_count || 0) - 1);
+        if (status === 'interested') a.interested_count = Math.max(0, (a.interested_count || 0) - 1);
+        // 总人数：取消后如果该用户已不再持有任何 status 才减
+        if (next.length === 0) a.interests_count = Math.max(0, (a.interests_count || 0) - 1);
       } else {
         await API.post(`/activities/${activityId}/interest`, { status });
-        if (a) {
-          const wasGoing = a.my_interest === 'going';
-          const wasInterested = a.my_interest === 'interested';
-          if (!wasGoing && !wasInterested) {
-            a.interests_count += 1;
-            if (status === 'going') a.going_count += 1;
-          } else if (wasGoing && status === 'interested') {
-            a.going_count = Math.max(0, a.going_count - 1);
-          } else if (wasInterested && status === 'going') {
-            a.going_count += 1;
-          }
-          a.my_interest = status;
-        }
+        const wasEmpty = myInterests.length === 0;
+        a.my_interests = [...myInterests, status];
+        a.my_interest = a.my_interests[0];
+        if (status === 'going') a.going_count = (a.going_count || 0) + 1;
+        if (status === 'interested') a.interested_count = (a.interested_count || 0) + 1;
+        if (wasEmpty) a.interests_count = (a.interests_count || 0) + 1;
       }
       renderPlaza();
     } catch (e) { toast(e.message, true); }
