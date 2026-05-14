@@ -200,9 +200,16 @@ db.exec(`
     date TEXT NOT NULL,           -- YYYY-MM-DD
     time TEXT NOT NULL DEFAULT '',
     location TEXT NOT NULL DEFAULT '',
-    songs TEXT NOT NULL DEFAULT '',         -- 歌单（自由文本）
-    source_url TEXT NOT NULL DEFAULT '',    -- 来源链接（小红书 / 微博等）
+    songs TEXT NOT NULL DEFAULT '',         -- 旧字段，保留兼容
+    source_url TEXT NOT NULL DEFAULT '',
     note TEXT NOT NULL DEFAULT '',
+    -- 真实公告里的常见字段
+    theme TEXT NOT NULL DEFAULT '',          -- 专场主题 "aespa+TWS"
+    organizer TEXT NOT NULL DEFAULT '',      -- 主办方 "AQUA DANCE 第24期"
+    submit_deadline TEXT NOT NULL DEFAULT '', -- 投稿截止 "5.13 23:00"
+    submit_email TEXT NOT NULL DEFAULT '',
+    submit_info TEXT NOT NULL DEFAULT '',    -- 投稿要求/格式
+    highlights TEXT NOT NULL DEFAULT '',     -- 现场配套 "面光灯/背板/官摄"
     submitter_id INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending', -- pending | approved | rejected
     reject_reason TEXT NOT NULL DEFAULT '',
