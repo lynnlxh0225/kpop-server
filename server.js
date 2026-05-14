@@ -152,8 +152,10 @@ db.exec(`
     outfit_images TEXT NOT NULL DEFAULT '[]',
     status TEXT DEFAULT 'planned',
     notes TEXT DEFAULT '',
+    activity_id INTEGER,
     created_at INTEGER NOT NULL,
-    FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
+    FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
+    FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE SET NULL
   );
 
   -- 每个成员对每场路演的个人穿搭
@@ -1338,17 +1340,26 @@ function sanitizeImagesArr(arr) {
     .slice(0, 24); // 单条最多 24 张
 }
 
+function validateActivityId(activity_id) {
+  if (activity_id == null || activity_id === '') return null;
+  const aid = parseInt(activity_id, 10);
+  if (!aid) return null;
+  const a = db.prepare("SELECT id FROM activities WHERE id=? AND status='approved'").get(aid);
+  return a ? aid : null;
+}
+
 app.post("/api/songs/:sid/performances", authRequired, (req, res) => {
   const s = getSongOrFail(req, res); if (!s) return;
   if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可添加路演" });
-  const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance } = req.body || {};
+  const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance, activity_id } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: "请填写活动名" });
   if (!date) return res.status(400).json({ error: "请填写日期" });
   const imgs = JSON.stringify(sanitizeImagesArr(outfit_images));
+  const aid = validateActivityId(activity_id);
   const r = db.prepare(`
-    INSERT INTO performances (song_id, name, city, date, time, location, outfit, outfit_images, status, notes, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(s.id, name.trim(), city || "", date, time || "", location || "", outfit || "", imgs, status || "pending_submit", notes || "", now());
+    INSERT INTO performances (song_id, name, city, date, time, location, outfit, outfit_images, status, notes, activity_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(s.id, name.trim(), city || "", date, time || "", location || "", outfit || "", imgs, status || "pending_submit", notes || "", aid, now());
   saveAttendance("performance", r.lastInsertRowid, attendance || [], s.id);
   res.json({ id: r.lastInsertRowid });
 });
@@ -1359,9 +1370,13 @@ app.patch("/api/performances/:id", authRequired, (req, res) => {
   if (!p) return res.status(404).json({ error: "路演不存在" });
   const s = db.prepare("SELECT * FROM songs WHERE id=?").get(p.song_id);
   if (!canManage(s, req.userId)) return res.status(403).json({ error: "仅车主可修改" });
-  const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance } = req.body || {};
+  const { name, city, date, time, location, outfit, outfit_images, status, notes, attendance, activity_id } = req.body || {};
   const imgs = outfit_images !== undefined ? JSON.stringify(sanitizeImagesArr(outfit_images)) : p.outfit_images;
-  db.prepare(`UPDATE performances SET name=?, city=?, date=?, time=?, location=?, outfit=?, outfit_images=?, status=?, notes=? WHERE id=?`).run(
+  let aid = p.activity_id;
+  if (activity_id !== undefined) {
+    aid = activity_id === null || activity_id === '' ? null : validateActivityId(activity_id);
+  }
+  db.prepare(`UPDATE performances SET name=?, city=?, date=?, time=?, location=?, outfit=?, outfit_images=?, status=?, notes=?, activity_id=? WHERE id=?`).run(
     name !== undefined ? name : p.name,
     city !== undefined ? city : p.city,
     date !== undefined ? date : p.date,
@@ -1371,6 +1386,7 @@ app.patch("/api/performances/:id", authRequired, (req, res) => {
     imgs,
     status !== undefined ? status : p.status,
     notes !== undefined ? notes : p.notes,
+    aid,
     id
   );
   if (Array.isArray(attendance)) saveAttendance("performance", id, attendance, s.id);
