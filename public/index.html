@@ -3749,18 +3749,23 @@
       const plazaBadge = p.activity_id
         ? `<span class="badge" style="background:var(--primary-soft);color:var(--primary-deep);" title="关联到广场活动 ID ${p.activity_id}">📌 广场</span>`
         : '';
-      // 合并时间地点行
-      const metaParts = [];
-      if (p.date) metaParts.push(p.date + (p.time ? ' ' + p.time : ''));
+      // 时间一行 + 地点一行（带导航按钮）
+      const timeStr = p.date ? p.date + (p.time ? ' ' + p.time : '') : '';
+      const timeLine = timeStr
+        ? `<div class="row" style="color:var(--text-soft);">${escapeHtml(timeStr)}</div>`
+        : '';
       const locStr = [p.city, p.location].filter(Boolean).join(' · ');
-      if (locStr) metaParts.push(locStr);
-      const metaLine = metaParts.length
-        ? `<div class="row" style="color:var(--text-soft);">${metaParts.map(escapeHtml).join(' · ')}</div>`
+      const locLine = locStr
+        ? `<div class="row" style="color:var(--text-soft);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+             <span>📍 ${escapeHtml(locStr)}</span>
+             <button class="btn ghost small nav-btn" onclick="openNavSheet('${escapeAttr(p.location || locStr)}', '${escapeAttr(p.city || '')}')">🗺️ 导航</button>
+           </div>`
         : '';
       return `
         <div class="item-card">
           <h4>${escapeHtml(p.name)} <span class="badge" style="background:${st.bg};color:${st.text};">${st.label}</span> ${plazaBadge}</h4>
-          ${metaLine}
+          ${timeLine}
+          ${locLine}
           ${ownerImgsHtml}
           ${p.notes ? `<div class="row">${escapeHtml(p.notes)}</div>` : ''}
           ${attHtml ? `<div style="margin-top:8px;">${attHtml}</div>` : ''}
