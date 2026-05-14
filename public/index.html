@@ -1380,9 +1380,10 @@
     <div id="friendSongsList"></div>
   </section>
 
-  <!-- 整理消息（待确认队列） -->
+  <!-- 整理消息（待确认队列）—— 不在 tab 显示，从歌曲页跳过来 -->
   <section class="page" id="page-inbox">
-    <div class="page-header">
+    <button class="back-btn" onclick="switchTab('songs')">← 返回歌曲</button>
+    <div class="page-header" style="margin-top:8px;">
       <h2>📥 整理消息</h2>
     </div>
 
