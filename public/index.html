@@ -2476,7 +2476,10 @@
     const me = await API.get("/auth/me");
     state.user = me.user;
     renderHeader();
-    await Promise.all([loadFriends(), loadRequests(), loadSongs(), loadPending()]);
+    await Promise.all([loadFriends(), loadSongs(), loadPending()]);
+    // 隐藏好友页角标（旧版的"待审核"红点不再需要）
+    const dot = document.getElementById("friendsDot");
+    if (dot) dot.style.display = "none";
     renderHero();
     renderSongs();
     renderFriends();
