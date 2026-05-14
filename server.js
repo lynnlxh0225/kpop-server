@@ -29,7 +29,8 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 // 注册上限：当前用户数 ≥ MAX_USERS 时关闭注册
 const MAX_USERS = parseInt(process.env.MAX_USERS || "50", 10);
 // 管理员邮箱（逗号分隔）：用于广场审核
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "lynnlxh0225@gmail.com")
+// 默认两个：你的主账号 + Gmail。可以用 .env 的 ADMIN_EMAILS 完全覆盖
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "2408010120@qq.com,lynnlxh0225@gmail.com")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 function isAdmin(userId) {
   if (!userId) return false;
