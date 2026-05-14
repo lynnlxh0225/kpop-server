@@ -2302,6 +2302,50 @@ app.get("/api/activities/mine", authRequired, (req, res) => {
   res.json({ activities: rows });
 });
 
+// 提交人改自己的活动 → 改完自动回到 pending，重新进入审核队列
+app.patch("/api/activities/:id", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const row = db.prepare("SELECT * FROM activities WHERE id=?").get(id);
+  if (!row) return res.status(404).json({ error: "活动不存在" });
+  if (row.submitter_id !== req.userId) return res.status(403).json({ error: "只能改自己提交的" });
+
+  const b = req.body || {};
+  const title = (b.title || "").toString().trim();
+  const city = (b.city || "").toString().trim();
+  const date = (b.date || "").toString().trim();
+  if (!title) return res.status(400).json({ error: "请填活动名" });
+  if (!city || !VALID_CITIES.has(city)) return res.status(400).json({ error: "城市不在列表里" });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "日期格式应为 YYYY-MM-DD" });
+  if (date < todayStr()) return res.status(400).json({ error: "日期不能早于今天" });
+
+  db.prepare(`
+    UPDATE activities SET
+      title=?, city=?, district=?, date=?, time=?, location=?,
+      theme=?, organizer=?, submit_deadline=?, submit_email=?, submit_info=?, highlights=?,
+      songs=?, source_url=?, note=?,
+      status='pending', reject_reason=NULL, reviewed_at=NULL
+    WHERE id=?
+  `).run(
+    title.slice(0, 100),
+    city,
+    (b.district || "").toString().slice(0, 50),
+    date,
+    (b.time || "").toString().slice(0, 50),
+    (b.location || "").toString().slice(0, 200),
+    (b.theme || "").toString().slice(0, 100),
+    (b.organizer || "").toString().slice(0, 100),
+    (b.submit_deadline || "").toString().slice(0, 50),
+    (b.submit_email || "").toString().slice(0, 100),
+    (b.submit_info || "").toString().slice(0, 1000),
+    (b.highlights || "").toString().slice(0, 300),
+    (b.songs || "").toString().slice(0, 500),
+    (b.source_url || "").toString().slice(0, 500),
+    (b.note || "").toString().slice(0, 500),
+    id
+  );
+  res.json({ id, status: "pending", message: "已重新提交审核" });
+});
+
 // ===== 管理员（仅 ADMIN_EMAILS 用户）=====
 function requireAdmin(req, res, next) {
   if (!isAdmin(req.userId)) return res.status(403).json({ error: "需要管理员权限" });
