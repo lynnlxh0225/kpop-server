@@ -1631,7 +1631,8 @@
     </div>
     <div style="margin-top:12px;">
       <label class="field">位置 / 担当</label>
-      <input id="newMemberPosition" placeholder="例如：Karina (Center)" />
+      <input id="newMemberPosition" placeholder="例如：Karina (Center)" list="memberPosOptions" autocomplete="off" />
+      <datalist id="memberPosOptions"></datalist>
     </div>
     <div class="footer">
       <button class="btn ghost" onclick="closeModal('addMemberModal')">取消</button>
