@@ -3739,6 +3739,7 @@
     document.getElementById("perfNotes").value = p?.notes || "";
     perfDraftImages = Array.isArray(p?.outfit_images) ? p.outfit_images.slice() : [];
     renderPerfImagesBox();
+    renderOutfitChips();
     // 来源 / activity_id：编辑模式根据现有数据切到对应模式；新建默认自己填
     _perfSelectedActivityId = p?.activity_id || null;
     switchPerfSource(_perfSelectedActivityId ? "plaza" : "custom");
@@ -4631,8 +4632,32 @@
     _actFields.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
     document.getElementById("actCity").value = document.getElementById("plazaCity").value || "北京";
     document.getElementById("actAgreed").checked = false;
+    // 截止日期/时间也清空
+    const d = document.getElementById("actSubmitDeadlineDate");
+    const t = document.getElementById("actSubmitDeadlineTime");
+    if (d) d.value = "";
+    if (t) t.value = "";
     openModal("submitActivityModal");
   }
+  // 把 date + time 拼成 "M.D HH:MM" 存进 hidden submit_deadline
+  function syncSubmitDeadline() {
+    const d = document.getElementById("actSubmitDeadlineDate").value;
+    const t = document.getElementById("actSubmitDeadlineTime").value;
+    let str = "";
+    if (d) {
+      const m = d.match(/^\d{4}-(\d{2})-(\d{2})$/);
+      if (m) str = `${parseInt(m[1])}.${parseInt(m[2])}`;
+    }
+    if (t) str = (str ? str + " " : "") + t;
+    document.getElementById("actSubmitDeadline").value = str;
+  }
+  // 自动监听变化
+  document.addEventListener("DOMContentLoaded", () => {
+    const d = document.getElementById("actSubmitDeadlineDate");
+    const t = document.getElementById("actSubmitDeadlineTime");
+    if (d) d.addEventListener("change", syncSubmitDeadline);
+    if (t) t.addEventListener("change", syncSubmitDeadline);
+  });
 
   async function submitActivity() {
     const body = {
