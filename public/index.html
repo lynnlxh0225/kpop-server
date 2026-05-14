@@ -3053,12 +3053,16 @@
       list.innerHTML = `<div class="empty"><span class="emoji">🎵</span><div>还没有歌曲</div><div style="font-size:12px;color:var(--text-soft);margin-top:6px;">点右上 + 新建</div></div>`;
       return;
     }
-    const html = state.songs.map(s => {
+    // 按状态优先级排序：紧急的在前；同优先级保持原顺序
+    const songsForRender = state.songs.map(s => ({ s, status: computeSongStatus(s) }))
+      .sort((a, b) => a.status.priority - b.status.priority);
+    const html = songsForRender.map(({ s, status }) => {
       const activeTeam = (s.team || []).filter(t => t.status === 'active');
       const rehCount = (s.rehearsals || []).length;
       const perfCount = (s.performances || []).filter(p => p.status !== 'no_show').length;
       let roleBadge = '';
-      if (!s.claimed) roleBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;">待认领</span>';
+      // 待认领的状态已经在 status chip 里显示，role badge 就不再重复显示"待认领"
+      if (!s.claimed) roleBadge = '';
       else if (s.my_role === 'owner') roleBadge = '<span class="badge role-owner">车主</span>';
       else if (s.my_role === 'member') roleBadge = '<span class="badge role-member">已加入</span>';
       else roleBadge = '<span class="badge role-left">已退出</span>';
@@ -3068,9 +3072,14 @@
       if (activeTeam.length) counts.push(`<span class="badge team">👥 ${activeTeam.length}</span>`);
       if (rehCount) counts.push(`<span class="badge rehear">📅 ${rehCount}</span>`);
       if (perfCount) counts.push(`<span class="badge perf">🎤 ${perfCount}</span>`);
+      // 状态 chip（显眼地放在标题旁边）
+      const statusChip = `<span class="song-status-chip" style="background:${status.bg};color:${status.text};">${status.label}</span>`;
       return `
         <div class="song-card ${s.my_role === 'left' ? 'left' : ''}" onclick="openSongDetail(${s.id})">
-          <div class="title">${escapeHtml(s.title)}</div>
+          <div class="title-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <div class="title" style="flex:1;min-width:0;">${escapeHtml(s.title)}</div>
+            ${statusChip}
+          </div>
           <div class="artist">${escapeHtml(s.artist || "未知组合")}${s.owner ? ' · ' + escapeHtml(s.owner.name) : ''}</div>
           <div class="badges">
             ${roleBadge}
