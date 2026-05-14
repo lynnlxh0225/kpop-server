@@ -3631,6 +3631,8 @@
   let editingPerfId = null;
   let perfDraftAttendance = [];
   let perfDraftImages = [];
+  let _perfPlazaActivities = []; // 广场活动缓存
+  let _perfSelectedActivityId = null;
   function openPerfModal(id) {
     const s = findSong(currentSongId); if (!s) return;
     if (s.my_role !== 'owner') return toast("仅车主可操作", true);
@@ -3647,6 +3649,11 @@
     document.getElementById("perfNotes").value = p?.notes || "";
     perfDraftImages = Array.isArray(p?.outfit_images) ? p.outfit_images.slice() : [];
     renderPerfImagesBox();
+    // 来源 / activity_id：编辑模式根据现有数据切到对应模式；新建默认自己填
+    _perfSelectedActivityId = p?.activity_id || null;
+    switchPerfSource(_perfSelectedActivityId ? "plaza" : "custom");
+    // 异步加载广场活动列表（仅当切到 plaza 时才生效）
+    loadPlazaActivitiesForPerf();
     const activeMembers = (s.team || []).filter(t => t.status === 'active');
     if (p && p.attendance && p.attendance.length) {
       perfDraftAttendance = activeMembers.map(t => {
