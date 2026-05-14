@@ -3781,10 +3781,24 @@
     perfDraftImages = Array.isArray(p?.outfit_images) ? p.outfit_images.slice() : [];
     renderPerfImagesBox();
     renderOutfitChips();
-    // 来源 / activity_id：编辑模式根据现有数据切到对应模式；新建默认自己填
+    // 广场城市筛选：记忆上次选的
+    try {
+      const lastCity = localStorage.getItem("kpop_plaza_city") || "北京";
+      const pcSel = document.getElementById("perfPlazaCity");
+      if (pcSel) pcSel.value = Array.from(pcSel.options).some(o => o.value === lastCity) ? lastCity : "北京";
+    } catch {}
+    // 来源 / activity_id：
+    // - 编辑模式：有 activity_id → plaza 模式（保留选中状态）；没有 → custom 模式
+    // - 新建模式：默认 plaza，让用户从卡片里选
     _perfSelectedActivityId = p?.activity_id || null;
-    switchPerfSource(_perfSelectedActivityId ? "plaza" : "custom");
-    // 异步加载广场活动列表（仅当切到 plaza 时才生效）
+    if (id) {
+      // 编辑：直接看用户原来用哪种来源
+      switchPerfSource(_perfSelectedActivityId ? "plaza" : "custom");
+    } else {
+      // 新建：默认 plaza
+      switchPerfSource("plaza");
+    }
+    // 异步加载广场活动卡片
     loadPlazaActivitiesForPerf();
     const activeMembers = (s.team || []).filter(t => t.status === 'active');
     if (p && p.attendance && p.attendance.length) {
@@ -3798,78 +3812,132 @@
     renderPerfAttendance();
     openModal("perfModal");
   }
-  // 切换路演来源：从广场选 / 自己填
+
+  // 切换路演来源：plaza（从广场选）/ custom（手填）
   function switchPerfSource(mode) {
-    const plaza = document.getElementById("perfSrcPlaza");
-    const custom = document.getElementById("perfSrcCustom");
-    const section = document.getElementById("perfPlazaSection");
-    // toggle 按钮的 active 状态用 ghost / 主色控制
+    const plaza = document.getElementById("perfPlazaSection");
+    const custom = document.getElementById("perfCustomSection");
+    const extra = document.getElementById("perfExtraSection");
+    const summary = document.getElementById("perfSelectedSummary");
+    const saveBtn = document.getElementById("perfSaveBtn");
     if (mode === "plaza") {
-      plaza.classList.remove("ghost");
-      custom.classList.add("ghost");
-      section.style.display = "";
+      plaza.style.display = "";
+      custom.style.display = "none";
+      // 只有选了活动卡片，才显示附加区 + 启用保存
+      if (_perfSelectedActivityId) {
+        extra.style.display = "";
+        saveBtn.disabled = false;
+        renderPerfSelectedSummary();
+      } else {
+        extra.style.display = "none";
+        saveBtn.disabled = true;
+        summary.style.display = "none";
+      }
     } else {
-      plaza.classList.add("ghost");
-      custom.classList.remove("ghost");
-      section.style.display = "none";
+      plaza.style.display = "none";
+      custom.style.display = "";
+      extra.style.display = "";
+      saveBtn.disabled = false;
+      summary.style.display = "none";
       // 切到自己填 → 清掉关联
       _perfSelectedActivityId = null;
     }
   }
 
+  function renderPerfSelectedSummary() {
+    const summary = document.getElementById("perfSelectedSummary");
+    if (!_perfSelectedActivityId) { summary.style.display = "none"; return; }
+    const a = _perfPlazaActivities.find(x => x.id === _perfSelectedActivityId);
+    if (!a) { summary.style.display = "none"; return; }
+    const loc = [a.district, a.location].filter(Boolean).join(" · ");
+    summary.style.display = "";
+    summary.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;">📌 ${escapeHtml(a.title)}</div>
+          <div style="font-size:12px;margin-top:2px;opacity:0.85;">${escapeHtml(a.date || '')} ${escapeHtml(a.time || '')} · ${escapeHtml(a.city || '')}${loc ? ' · ' + escapeHtml(loc) : ''}</div>
+        </div>
+        <a href="#" onclick="event.preventDefault();clearPerfSelection();" style="font-size:12px;color:var(--primary-deep);text-decoration:underline;flex:0 0 auto;">换一个</a>
+      </div>`;
+  }
+
+  function clearPerfSelection() {
+    _perfSelectedActivityId = null;
+    switchPerfSource("plaza");
+    renderPerfActivityCards();
+  }
+
   async function loadPlazaActivitiesForPerf() {
-    const sel = document.getElementById("perfActivityId");
-    if (!sel) return;
+    const box = document.getElementById("perfActivityCards");
+    if (!box) return;
+    box.innerHTML = `<div class="empty" style="padding:20px;color:var(--text-soft);">加载中…</div>`;
+    const city = document.getElementById("perfPlazaCity").value || "北京";
+    try { localStorage.setItem("kpop_plaza_city", city); } catch {}
     try {
-      // 拉所有城市（合并几个常见城市的近期）
-      // 简化：默认拉北京，用户能在下拉里搜
-      const r = await API.get(`/activities?city=${encodeURIComponent("北京")}`);
+      const r = await API.get(`/activities?city=${encodeURIComponent(city)}`);
       _perfPlazaActivities = r.activities || [];
-      // 顺便也拉其他大城市
-      const otherCities = ["上海", "广州", "深圳", "成都", "杭州"];
-      const others = await Promise.all(otherCities.map(c =>
-        API.get(`/activities?city=${encodeURIComponent(c)}`).then(x => x.activities || []).catch(() => [])
-      ));
-      _perfPlazaActivities = _perfPlazaActivities.concat(...others);
-      // 排序 by date
       _perfPlazaActivities.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-      renderPerfActivitySelect();
+      renderPerfActivityCards();
     } catch (e) {
-      sel.innerHTML = `<option value="">加载失败 — ${escapeAttr(e.message)}</option>`;
+      box.innerHTML = `<div class="empty" style="padding:20px;">加载失败：${escapeHtml(e.message)}</div>`;
     }
   }
 
-  function renderPerfActivitySelect() {
-    const sel = document.getElementById("perfActivityId");
-    const opts = [`<option value="">— 选一个广场活动 —</option>`];
-    for (const a of _perfPlazaActivities) {
-      const themeStr = a.theme ? ` · ${a.theme}` : '';
-      const label = `${a.date} · ${a.city}${themeStr} · ${a.title}`.slice(0, 80);
-      opts.push(`<option value="${a.id}">${escapeHtml(label)}</option>`);
-    }
-    sel.innerHTML = opts.join("");
-    if (_perfSelectedActivityId) sel.value = String(_perfSelectedActivityId);
-    sel.onchange = onPerfActivityChange;
-  }
-
-  function onPerfActivityChange() {
-    const sel = document.getElementById("perfActivityId");
-    const id = parseInt(sel.value, 10);
-    if (!id) {
-      _perfSelectedActivityId = null;
+  function renderPerfActivityCards() {
+    const box = document.getElementById("perfActivityCards");
+    if (!box) return;
+    if (!_perfPlazaActivities.length) {
+      box.innerHTML = `
+        <div class="empty" style="padding:24px;">
+          <div style="font-size:13px;color:var(--text-soft);">该城市暂无近期活动</div>
+          <div style="font-size:11px;color:var(--text-soft);margin-top:4px;">换个城市试试，或手动添加</div>
+        </div>`;
       return;
     }
+    box.innerHTML = _perfPlazaActivities.map(a => {
+      const selected = a.id === _perfSelectedActivityId;
+      const dateStr = formatPlazaDate(a.date);
+      const loc = [a.district, a.location].filter(Boolean).join(" · ");
+      return `
+        <div onclick="selectPerfActivityCard(${a.id})" style="
+            cursor:pointer; padding:10px 12px; border-radius:10px;
+            border:1.5px solid ${selected ? 'var(--primary)' : 'var(--border)'};
+            background:${selected ? 'var(--primary-soft)' : '#fff'};
+            transition:all 0.15s;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div style="font-weight:600;font-size:14px;flex:1;min-width:0;">${selected ? '✓ ' : ''}${escapeHtml(a.title)}</div>
+            <span style="font-size:11px;color:var(--text-soft);flex:0 0 auto;">${escapeHtml(dateStr)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-soft);margin-top:3px;">
+            ${a.time ? `⏰ ${escapeHtml(a.time)} · ` : ''}📍 ${escapeHtml(a.city || '')}${loc ? ' · ' + escapeHtml(loc) : ''}
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  function selectPerfActivityCard(id) {
     const a = _perfPlazaActivities.find(x => x.id === id);
     if (!a) return;
     _perfSelectedActivityId = id;
-    // 自动填字段：活动名优先用 theme + title，时间/日期/城市/地点照搬
+    // 自动填核心字段（在隐藏的 custom section 里）
     document.getElementById("perfName").value = a.title || "";
-    if (a.city) document.getElementById("perfCity").value = a.city;
+    if (a.city) {
+      const citySel = document.getElementById("perfCity");
+      const has = Array.from(citySel.options).some(o => o.value === a.city);
+      citySel.value = has ? a.city : "其它";
+    }
     if (a.date) document.getElementById("perfDate").value = a.date;
-    if (a.time) document.getElementById("perfTime").value = a.time;
+    if (a.time) {
+      const [tFrom] = parseTimeRange(a.time);
+      document.getElementById("perfTime").value = tFrom || (/^\d{2}:\d{2}$/.test(a.time) ? a.time : '');
+    }
     const loc = [a.district, a.location].filter(Boolean).join(" · ");
     if (loc) document.getElementById("perfLocation").value = loc;
-    toast(`📌 已从广场填入：${a.title}`);
+    // 展示附加区
+    document.getElementById("perfExtraSection").style.display = "";
+    document.getElementById("perfSaveBtn").disabled = false;
+    renderPerfSelectedSummary();
+    renderPerfActivityCards();
   }
 
   function renderPerfAttendance() {
