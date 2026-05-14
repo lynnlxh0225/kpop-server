@@ -5112,14 +5112,32 @@
 
   // ===================== 设置 =====================
   function renderSettings() {
-    document.getElementById("setEmail").textContent = state.user.email;
-    document.getElementById("setName").textContent = state.user.name;
-    document.getElementById("setAvatar").textContent = state.user.avatar;
+    // 新版个人中心：profileMainCard
+    const pn = document.getElementById("profileName");
+    const pe = document.getElementById("profileEmail");
+    const pa = document.getElementById("profileAvatar");
+    if (pn) pn.textContent = state.user.name;
+    if (pe) pe.textContent = state.user.email;
+    if (pa) pa.textContent = state.user.avatar || '👤';
     document.getElementById("myInviteCode").textContent = state.user.invite_code;
     document.getElementById("myInviteLink").value = `${location.origin}/?invite=${state.user.invite_code}`;
     loadCalendarUrl();
     renderThemeSelection();
     renderMyDanceTags();
+    renderRecommendedTags();
+  }
+
+  function renderRecommendedTags() {
+    const box = document.getElementById("recommendedTagsBox");
+    if (!box) return;
+    const presets = ['主舞担','rap 担','vocal 担','队长','门面','可周末练','可工作日晚练','能跳男团','能跳女团','灵活档期','直拍能 c','气氛担当'];
+    const have = (state.user.dance_tags || []).map(x => x.toLowerCase());
+    const html = ['<span style="font-size:11px;color:var(--text-soft);">推荐：</span>']
+      .concat(presets
+        .filter(t => !have.includes(t.toLowerCase()))
+        .map(t => `<span class="slot-chip" style="cursor:pointer;font-size:11px;" onclick="quickAddDanceTag('${escapeAttr(t)}')">${escapeHtml(t)}</span>`))
+      .join("");
+    box.innerHTML = html;
   }
 
   // ============ 跳舞标签管理 ============
