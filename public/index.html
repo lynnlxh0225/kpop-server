@@ -4383,6 +4383,74 @@
     } catch (e) { toast(e.message, true); }
   }
 
+  // 打开发活动 modal
+  function openSubmitActivityModal() {
+    // 清空表单
+    document.getElementById("actTitle").value = "";
+    document.getElementById("actCity").value = document.getElementById("plazaCity").value || "北京";
+    document.getElementById("actDistrict").value = "";
+    document.getElementById("actDate").value = "";
+    document.getElementById("actTime").value = "";
+    document.getElementById("actLocation").value = "";
+    document.getElementById("actSongs").value = "";
+    document.getElementById("actSourceUrl").value = "";
+    document.getElementById("actNote").value = "";
+    document.getElementById("actAiText").value = "";
+    document.getElementById("actAgreed").checked = false;
+    openModal("submitActivityModal");
+  }
+
+  async function submitActivity() {
+    const body = {
+      title: document.getElementById("actTitle").value.trim(),
+      city: document.getElementById("actCity").value,
+      district: document.getElementById("actDistrict").value.trim(),
+      date: document.getElementById("actDate").value,
+      time: document.getElementById("actTime").value.trim(),
+      location: document.getElementById("actLocation").value.trim(),
+      songs: document.getElementById("actSongs").value.trim(),
+      source_url: document.getElementById("actSourceUrl").value.trim(),
+      note: document.getElementById("actNote").value.trim(),
+      agreed_truthful: document.getElementById("actAgreed").checked,
+    };
+    if (!body.agreed_truthful) return toast("请先勾选承诺真实", true);
+    const btn = document.getElementById("submitActivityBtn");
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "提交中...";
+    try {
+      const r = await API.post("/activities", body);
+      toast("🎉 " + (r.message || "已提交，等审核"));
+      closeModal("submitActivityModal");
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  // 用 AI 从小红书原文里提字段（复用 /api/parse 的 prompt 思路，但简化为活动场景）
+  async function aiExtractActivity() {
+    const text = document.getElementById("actAiText").value.trim();
+    if (!text) return toast("请先粘贴原文", true);
+    toast("✨ AI 解析中…");
+    try {
+      // 直接复用一个新的辅助路由 /api/activities/ai-extract
+      const r = await API.post("/activities/ai-extract", { text });
+      if (r.title)      document.getElementById("actTitle").value = r.title;
+      if (r.city && Array.from(document.getElementById("actCity").options).some(o => o.value === r.city)) {
+        document.getElementById("actCity").value = r.city;
+      }
+      if (r.district)   document.getElementById("actDistrict").value = r.district;
+      if (r.date)       document.getElementById("actDate").value = r.date;
+      if (r.time)       document.getElementById("actTime").value = r.time;
+      if (r.location)   document.getElementById("actLocation").value = r.location;
+      if (r.songs)      document.getElementById("actSongs").value = r.songs;
+      if (r.source_url) document.getElementById("actSourceUrl").value = r.source_url;
+      if (r.note)       document.getElementById("actNote").value = r.note;
+      toast("✅ 字段已填，请核对");
+    } catch (e) { toast("AI 解析失败：" + e.message, true); }
+  }
+
   // 看我提交的（弹窗显示）
   async function showMyActivities() {
     try {
