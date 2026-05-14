@@ -67,8 +67,24 @@ db.exec(`
     avatar TEXT DEFAULT '👤',
     invite_code TEXT UNIQUE NOT NULL,
     calendar_token TEXT,
+    dance_tags TEXT NOT NULL DEFAULT '[]',  -- 用户自我标签：JSON 数组
     created_at INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS friend_reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reviewer_id INTEGER NOT NULL,
+    reviewee_id INTEGER NOT NULL,
+    rating INTEGER NOT NULL,   -- 1-5
+    comment TEXT NOT NULL DEFAULT '',
+    is_negative INTEGER NOT NULL DEFAULT 0,  -- 1-2 星 = 1（匿名差评）
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewee_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_review_reviewee ON friend_reviews(reviewee_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_review_pair ON friend_reviews(reviewer_id, reviewee_id);
+  CREATE INDEX IF NOT EXISTS idx_review_neg ON friend_reviews(is_negative, created_at);
 
   CREATE TABLE IF NOT EXISTS friendships (
     user_a_id INTEGER NOT NULL,
