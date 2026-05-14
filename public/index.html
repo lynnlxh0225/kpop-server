@@ -3548,16 +3548,21 @@
         <button class="btn small ghost" onclick="openRehearsalModal(${r.id})">编辑</button>
         <button class="btn small danger" onclick="deleteRehearsal(${r.id})">删除</button>` : '';
       // 标题：日期 + 时间；副行：地点 + 服装合并
-      const subParts = [];
-      if (r.location) subParts.push('📍 ' + r.location);
-      if (r.outfit) subParts.push('👗 ' + r.outfit);
-      const subLine = subParts.length
-        ? `<div class="row" style="color:var(--text-soft);">${subParts.map(escapeHtml).join(' · ')}</div>`
+      // 地点单独一行（带导航按钮）；服装如有再追加一行
+      const locLine = r.location
+        ? `<div class="row" style="color:var(--text-soft);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+             <span>📍 ${escapeHtml(r.location)}</span>
+             <button class="btn ghost small nav-btn" onclick="openNavSheet('${escapeAttr(r.location)}', '')">🗺️ 导航</button>
+           </div>`
+        : '';
+      const outfitLine = r.outfit
+        ? `<div class="row" style="color:var(--text-soft);">👗 ${escapeHtml(r.outfit)}</div>`
         : '';
       return `
         <div class="item-card">
           <h4>${escapeHtml(r.date || '日期未定')} ${escapeHtml(r.time || '')}</h4>
-          ${subLine}
+          ${locLine}
+          ${outfitLine}
           ${r.notes ? `<div class="row">${escapeHtml(r.notes)}</div>` : ''}
           ${attHtml ? `<div style="margin-top:8px;">${attHtml}</div>` : ''}
           ${myAttHtml}
