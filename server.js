@@ -1020,6 +1020,141 @@ app.get("/api/users/by-code/:code", authRequired, (req, res) => {
   res.json({ user: publicUser(u) });
 });
 
+// ==================== 跳舞标签（用户自我描述）====================
+function parseDanceTags(raw) {
+  try {
+    const arr = JSON.parse(raw || "[]");
+    return Array.isArray(arr) ? arr.filter(x => typeof x === "string").slice(0, 12) : [];
+  } catch { return []; }
+}
+app.patch("/api/me/dance-tags", authRequired, (req, res) => {
+  const tags = Array.isArray(req.body && req.body.tags) ? req.body.tags : [];
+  const clean = [...new Set(tags
+    .filter(x => typeof x === "string")
+    .map(x => x.trim().slice(0, 20))
+    .filter(Boolean))].slice(0, 12);
+  db.prepare("UPDATE users SET dance_tags=? WHERE id=?").run(JSON.stringify(clean), req.userId);
+  res.json({ tags: clean });
+});
+
+// ==================== 好友评价 ====================
+// 敏感词：覆盖常见脏话 / 人身攻击 / 极端语；任一命中 → 拒绝（差评尤其严格）
+const SENSITIVE_WORDS = [
+  // 脏话 / 国骂
+  "傻逼", "傻b", "sb", "sb了", "煞笔", "煞比", "卧槽", "我操", "妈的", "tmd", "他妈的",
+  "fxxk", "fuck", "shit", "asshole", "bitch", "cunt", "damn",
+  "草泥马", "操你妈", "妈逼", "马勒戈壁", "屌丝", "屁眼", "婊子", "贱人", "贱货",
+  // 人身攻击
+  "丑逼", "丑八怪", "肥猪", "死胖子", "矮冬瓜", "智障", "脑残", "弱智", "白痴", "蠢货", "废物",
+  // 极端语
+  "去死", "自杀", "自残", "杀了你", "打死你",
+  // 歧视
+  "残废", "畸形", "变态", "死基佬",
+];
+
+// 大小写不敏感、宽松匹配（去除中间空格）
+function containsSensitive(text) {
+  if (!text) return null;
+  const normalized = String(text).toLowerCase().replace(/\s+/g, "");
+  for (const w of SENSITIVE_WORDS) {
+    if (normalized.includes(w.toLowerCase())) return w;
+  }
+  return null;
+}
+
+// 评价某个好友
+app.post("/api/users/:id/reviews", authRequired, (req, res) => {
+  const targetId = parseInt(req.params.id, 10);
+  if (!targetId) return res.status(400).json({ error: "参数错误" });
+  if (targetId === req.userId) return res.status(400).json({ error: "不能评价自己" });
+  if (!areFriends(req.userId, targetId)) return res.status(403).json({ error: "只能评价好友" });
+
+  const rating = parseInt((req.body && req.body.rating), 10);
+  if (!(rating >= 1 && rating <= 5)) return res.status(400).json({ error: "评分必须 1-5 星" });
+  const comment = (req.body && req.body.comment || "").toString().slice(0, 200);
+  const isNegative = rating <= 2 ? 1 : 0;
+
+  // 敏感词检查（好评/差评都查；差评更严，但词表是同一份）
+  const hit = containsSensitive(comment);
+  if (hit) return res.status(400).json({ error: `评论包含不合适词汇（${hit}），请修改` });
+
+  // 差评频控：过去 24h 内
+  if (isNegative) {
+    const t24 = now() - 24 * 3600 * 1000;
+    const myRecentNeg = db.prepare(`
+      SELECT COUNT(*) AS c FROM friend_reviews
+      WHERE reviewer_id=? AND is_negative=1 AND created_at>=?
+    `).get(req.userId, t24).c;
+    if (myRecentNeg >= 1) return res.status(429).json({ error: "你 24 小时内已发过 1 条差评，明天再说" });
+
+    const targetRecentNeg = db.prepare(`
+      SELECT COUNT(*) AS c FROM friend_reviews
+      WHERE reviewee_id=? AND is_negative=1 AND created_at>=?
+    `).get(targetId, t24).c;
+    if (targetRecentNeg >= 1) return res.status(429).json({ error: "对方 24 小时内已收到 1 条差评，让 TA 缓缓" });
+  }
+
+  const id = db.prepare(`
+    INSERT INTO friend_reviews (reviewer_id, reviewee_id, rating, comment, is_negative, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(req.userId, targetId, rating, comment, isNegative, now()).lastInsertRowid;
+  res.json({ id, status: "ok" });
+});
+
+// 看某人的评价：好评带评价人；差评匿名（仅星 + 评论 + 时间）
+// 自己看自己也看不到差评的评价人
+app.get("/api/users/:id/reviews", authRequired, (req, res) => {
+  const targetId = parseInt(req.params.id, 10);
+  if (!targetId) return res.status(400).json({ error: "参数错误" });
+  // 必须是好友才能看（自己也能看自己）
+  if (targetId !== req.userId && !areFriends(req.userId, targetId)) {
+    return res.status(403).json({ error: "仅好友可见" });
+  }
+
+  const rows = db.prepare(`
+    SELECT r.*, u.name AS reviewer_name, u.avatar AS reviewer_avatar
+    FROM friend_reviews r
+    JOIN users u ON u.id = r.reviewer_id
+    WHERE r.reviewee_id=?
+    ORDER BY r.created_at DESC
+    LIMIT 60
+  `).all(targetId);
+
+  // 求平均星 + 总数
+  const total = rows.length;
+  const avg = total ? rows.reduce((s, r) => s + r.rating, 0) / total : 0;
+
+  // 差评匿名化（保留我自己发的——这样我能看到撤回按钮）
+  const list = rows.map((r) => {
+    const mine = r.reviewer_id === req.userId;
+    if (r.is_negative && !mine) {
+      return {
+        id: r.id, rating: r.rating, comment: r.comment, is_negative: 1,
+        created_at: r.created_at,
+        reviewer: { name: "匿名", avatar: "🕶️" },
+        mine: false,
+      };
+    }
+    return {
+      id: r.id, rating: r.rating, comment: r.comment, is_negative: r.is_negative,
+      created_at: r.created_at,
+      reviewer: { id: r.reviewer_id, name: r.reviewer_name, avatar: r.reviewer_avatar },
+      mine,
+    };
+  });
+  res.json({ reviews: list, count: total, average: Math.round(avg * 10) / 10 });
+});
+
+// 撤回自己的评价
+app.delete("/api/reviews/:id", authRequired, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const r = db.prepare("SELECT * FROM friend_reviews WHERE id=?").get(id);
+  if (!r) return res.status(404).json({ error: "评价不存在" });
+  if (r.reviewer_id !== req.userId) return res.status(403).json({ error: "只能撤回自己写的评价" });
+  db.prepare("DELETE FROM friend_reviews WHERE id=?").run(id);
+  res.json({ ok: true });
+});
+
 // ==================== 歌曲 ====================
 // 我能看到的所有歌曲（车主 + active 成员 + left 成员）
 app.get("/api/songs", authRequired, (req, res) => {
