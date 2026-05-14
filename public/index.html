@@ -1861,6 +1861,19 @@
 <div class="modal-bg" id="perfModal">
   <div class="modal">
     <h3 id="perfModalTitle">添加路演</h3>
+    <!-- 来源选择：从广场选 vs 自己填 -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg);padding:4px;border-radius:10px;">
+      <button type="button" class="btn small ghost" id="perfSrcPlaza" onclick="switchPerfSource('plaza')" style="flex:1;">📌 从广场选</button>
+      <button type="button" class="btn small ghost" id="perfSrcCustom" onclick="switchPerfSource('custom')" style="flex:1;">✏️ 自己填</button>
+    </div>
+    <!-- 广场活动选择（仅 plaza 模式） -->
+    <div id="perfPlazaSection" style="display:none;margin-bottom:12px;">
+      <label class="field">选广场活动</label>
+      <select id="perfActivityId">
+        <option value="">— 加载中 —</option>
+      </select>
+      <p style="font-size:11px;color:var(--text-soft);margin:6px 0 0;">选完会自动填活动名/日期/时间/城市/地点。仍可继续编辑下面的字段，比如装搭和出席。</p>
+    </div>
     <div class="form-grid">
       <div>
         <label class="field">活动名称 *</label>
