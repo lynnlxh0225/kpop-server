@@ -1305,7 +1305,7 @@
   <nav class="tabs">
     <button class="tab-btn active" data-tab="songs">🎵 歌曲</button>
     <button class="tab-btn" data-tab="friends">👯 好友<span class="dot" id="friendsDot" style="display:none"></span></button>
-    <button class="tab-btn" data-tab="inbox">📥 整理消息<span class="dot" id="inboxDot" style="display:none"></span></button>
+    <button class="tab-btn" data-tab="plaza">🌍 广场<span class="dot" id="plazaDot" style="display:none"></span></button>
     <button class="tab-btn" data-tab="settings">⚙️ 设置</button>
   </nav>
 
@@ -1336,7 +1336,10 @@
 
     <div class="page-header">
       <h2>我的歌曲</h2>
-      <button class="btn" onclick="openSongModal()">+ 新建歌曲</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn small ghost" onclick="switchTab('inbox')">📥 整理消息<span class="dot" id="inboxDot2" style="display:none;position:static;margin-left:4px;width:6px;height:6px;display:inline-block;"></span></button>
+        <button class="btn" onclick="openSongModal()">+ 新建歌曲</button>
+      </div>
     </div>
     <div id="songList"></div>
   </section>
