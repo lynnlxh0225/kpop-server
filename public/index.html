@@ -5182,6 +5182,7 @@
       const r = await API.patch("/me/dance-tags", { tags });
       state.user.dance_tags = r.tags || [];
       renderMyDanceTags();
+      renderRecommendedTags();
     } catch (e) { toast(e.message, true); }
   }
 
