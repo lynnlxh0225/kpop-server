@@ -2316,7 +2316,7 @@ app.patch("/api/activities/:id", authRequired, (req, res) => {
   if (!title) return res.status(400).json({ error: "请填活动名" });
   if (!city || !VALID_CITIES.has(city)) return res.status(400).json({ error: "城市不在列表里" });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "日期格式应为 YYYY-MM-DD" });
-  if (date < todayStr()) return res.status(400).json({ error: "日期不能早于今天" });
+  // 编辑模式不再校验"日期 < 今天"：旧活动也可能需要修订（订正历史记录）
 
   db.prepare(`
     UPDATE activities SET
