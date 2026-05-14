@@ -4869,9 +4869,14 @@
     switchTab("friend-detail");
     document.getElementById("friendDetailHeader").innerHTML = `<div style="color:var(--text-soft);font-size:13px;">加载中…</div>`;
     document.getElementById("friendSongsList").innerHTML = "";
+    const isMe = uid === state.user.id;
     try {
+      // 自己看自己：不调 /friends/songs（自己不是自己的好友）
+      const songsP = isMe
+        ? Promise.resolve({ friend: state.user, songs: [] })
+        : API.get(`/friends/${uid}/songs`);
       const [songsResp, reviewsResp] = await Promise.all([
-        API.get(`/friends/${uid}/songs`),
+        songsP,
         API.get(`/users/${uid}/reviews`).catch(() => ({ reviews: [], count: 0, average: 0 })),
       ]);
       _currentFriendDetail = { friend: songsResp.friend, songs: songsResp.songs || [], reviews: reviewsResp };
