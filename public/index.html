@@ -2692,6 +2692,12 @@
     }
     songSlotsDraft = Array.isArray(s.position_slots) ? s.position_slots.slice() : [];
     document.getElementById("newSlotInput").value = "";
+    // 填充艺人下拉补全：所有支持的女团名
+    const ad = document.getElementById("artistOptions");
+    if (ad && !ad.dataset.filled) {
+      ad.innerHTML = Object.keys(KPOP_GROUPS).map(name => `<option value="${escapeAttr(name)}">`).join("");
+      ad.dataset.filled = "1";
+    }
     // 新建模式下，把 artist 当前值再自动识别一次
     _slotsManuallyEdited = false;
     renderSongSlotsBox();
