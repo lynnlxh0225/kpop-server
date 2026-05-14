@@ -4529,6 +4529,36 @@
     }
   }
 
+  // 把活动日期渲染成左侧日历卡片 + diff chip（今天/明天/N 天后）
+  function renderActivityDateBlock(iso) {
+    const d = new Date(iso + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((d - today) / 86400000);
+    const week = "日一二三四五六"[d.getDay()];
+    let badge = '';
+    let blockStyle = 'background:var(--primary-soft);';
+    let numColor = 'var(--primary-deep)';
+    if (diff < 0) {
+      // 已过期 → 灰色
+      blockStyle = 'background:#f3f4f6;';
+      numColor = '#9ca3af';
+      badge = `<div style="font-size:10px;color:#9ca3af;margin-top:2px;font-weight:600;">已过期</div>`;
+    } else if (diff === 0) {
+      badge = `<div style="font-size:10px;background:#ef4444;color:#fff;border-radius:4px;padding:1px 4px;margin-top:2px;font-weight:700;">今天</div>`;
+    } else if (diff === 1) {
+      badge = `<div style="font-size:10px;background:#f59e0b;color:#fff;border-radius:4px;padding:1px 4px;margin-top:2px;font-weight:700;">明天</div>`;
+    } else if (diff <= 7) {
+      badge = `<div style="font-size:10px;color:var(--primary-deep);margin-top:2px;font-weight:600;">${diff} 天后</div>`;
+    }
+    return `
+      <div style="flex:0 0 60px;text-align:center;${blockStyle}border-radius:10px;padding:8px 4px;">
+        <div style="font-size:11px;color:var(--text-soft);">周${week}</div>
+        <div style="font-size:26px;font-weight:700;color:${numColor};line-height:1.1;">${d.getDate()}</div>
+        <div style="font-size:10px;color:var(--text-soft);">${d.getMonth() + 1} 月</div>
+        ${badge}
+      </div>`;
+  }
+
   function renderPlaza() {
     const list = document.getElementById("plazaList");
     if (!_plazaCache.length) {
