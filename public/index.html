@@ -2050,6 +2050,36 @@
   };
   function findSong(id) { return state.songs.find(s => s.id === id); }
 
+  // ===================== 通用 UI helper =====================
+  // 把 "HH:MM-HH:MM" 解析成 [from, to]；只填了开始的也认；其他自由文本返回 [null, null]
+  function parseTimeRange(s) {
+    if (!s) return [null, null];
+    const m = String(s).match(/^(\d{1,2}):(\d{2})\s*[-~–至到]\s*(\d{1,2}):(\d{2})$/);
+    if (m) return [`${m[1].padStart(2,"0")}:${m[2]}`, `${m[3].padStart(2,"0")}:${m[4]}`];
+    const one = String(s).match(/^(\d{1,2}):(\d{2})$/);
+    if (one) return [`${one[1].padStart(2,"0")}:${one[2]}`, null];
+    return [null, null];
+  }
+  // [from, to] 合成 "HH:MM-HH:MM" 或仅 "HH:MM"
+  function joinTimeRange(from, to) {
+    if (from && to) return `${from}-${to}`;
+    if (from) return from;
+    return "";
+  }
+
+  // 装搭常见预设
+  const OUTFIT_PRESETS = ["原版MV同款", "黑色练习服", "白色练习服", "学院风", "韩系 OOTD", "JK 制服", "黑色短袖+牛仔短裤"];
+  function renderOutfitChips() {
+    document.querySelectorAll(".preset-chips[data-target]").forEach((box) => {
+      if (box.dataset.rendered === "1") return; // 只渲染一次
+      const targetId = box.dataset.target;
+      box.innerHTML = OUTFIT_PRESETS.map(p =>
+        `<span class="preset-chip" onclick="document.getElementById('${targetId}').value='${escapeAttr(p)}';">${escapeHtml(p)}</span>`
+      ).join("");
+      box.dataset.rendered = "1";
+    });
+  }
+
   // ===================== 女团成员表 =====================
   // 用于新建歌曲时根据组合名自动建议位置占位
   const KPOP_GROUPS = {
