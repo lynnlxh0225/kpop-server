@@ -5089,10 +5089,14 @@
   }
 
   // 看我提交的（弹窗显示）
+  let _myActivitiesCache = [];
   async function showMyActivities() {
     try {
       const r = await API.get("/activities/mine");
-      const list = r.activities || [];
+      _myActivitiesCache = r.activities || [];
+      const list = _myActivitiesCache;
+      const old = document.getElementById("myActivitiesModal");
+      if (old) old.remove();
       const box = document.createElement("div");
       box.className = "modal-bg active";
       box.id = "myActivitiesModal";
@@ -5110,6 +5114,9 @@
                 <h4 style="margin:0 0 4px;">${escapeHtml(a.title)} ${statusBadge[a.status]||''}</h4>
                 <div style="font-size:12px;color:var(--text-soft);">${escapeHtml(a.city)} · ${escapeHtml(a.date)}${a.time ? ' · ' + escapeHtml(a.time) : ''}</div>
                 ${a.status === 'rejected' && a.reject_reason ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;">拒绝原因：${escapeHtml(a.reject_reason)}</div>` : ''}
+                <div class="actions" style="margin-top:8px;">
+                  <button class="btn small ghost" onclick="editMyActivity(${a.id})">✏️ 修改</button>
+                </div>
               </div>
             `).join("") : '<div class="empty"><div>还没有提交过活动</div></div>'}
           </div>
@@ -5119,6 +5126,15 @@
         </div>`;
       document.body.appendChild(box);
     } catch (e) { toast(e.message, true); }
+  }
+  // 编辑我提交的某一条活动 → 打开 submitActivityModal 编辑模式
+  function editMyActivity(id) {
+    const a = _myActivitiesCache.find(x => x.id === id);
+    if (!a) return toast("找不到该活动，刷新一下", true);
+    // 先关掉"我提交的"列表（避免叠加 modal 不好关）
+    const mine = document.getElementById("myActivitiesModal");
+    if (mine) mine.remove();
+    openSubmitActivityModal(a);
   }
 
   function renderInbox() {
