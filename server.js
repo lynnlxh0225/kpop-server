@@ -2131,8 +2131,13 @@ app.post("/api/activities", authRequired, (req, res) => {
   if (!b.agreed_truthful) return res.status(400).json({ error: "需要勾选「我承诺信息真实」" });
 
   const id = db.prepare(`
-    INSERT INTO activities (title, city, district, date, time, location, songs, source_url, note, submitter_id, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+    INSERT INTO activities (
+      title, city, district, date, time, location,
+      theme, organizer, submit_deadline, submit_email, submit_info, highlights,
+      songs, source_url, note,
+      submitter_id, status, created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?,  ?, ?, ?,  ?, 'pending', ?)
   `).run(
     title.slice(0, 100),
     city,
@@ -2140,6 +2145,12 @@ app.post("/api/activities", authRequired, (req, res) => {
     date,
     (b.time || "").toString().slice(0, 50),
     (b.location || "").toString().slice(0, 200),
+    (b.theme || "").toString().slice(0, 100),
+    (b.organizer || "").toString().slice(0, 100),
+    (b.submit_deadline || "").toString().slice(0, 50),
+    (b.submit_email || "").toString().slice(0, 100),
+    (b.submit_info || "").toString().slice(0, 1000),
+    (b.highlights || "").toString().slice(0, 300),
     (b.songs || "").toString().slice(0, 500),
     (b.source_url || "").toString().slice(0, 500),
     (b.note || "").toString().slice(0, 500),
@@ -2166,22 +2177,27 @@ app.post("/api/activities/ai-extract", authRequired, parseLimiter, async (req, r
 
   const systemPrompt = `你是 K-pop 随舞活动信息提取助手。从用户给的一段小红书 / 微博 / 微信原文里抽取活动字段，输出严格 JSON。
 
-字段：
-- title: 活动名（必填）
+字段（全部都是字符串，抽取不到就用 ""）：
+- title: 活动名（必填，例如 "AQUA DANCE 第24期" / "5.16 悠唐路演"）
+- organizer: 主办方品牌（例如 "AQUA DANCE"）
+- theme: 专场主题（例如 "aespa+TWS 专场" / "新歌专场" / "经典老歌专场"）
 - city: 城市名（仅在 [北京/上海/广州/深圳/成都/杭州/南京/武汉/西安/重庆/其它] 中选）
-- district: 区或街道（如：朝阳、海淀、太古里）
+- district: 区或街道
 - date: YYYY-MM-DD（相对日期"明天/周六"按今天 ${todayIso} 换算）
-- time: HH:MM-HH:MM 或自由文本时间
-- location: 具体地点
-- songs: 要跳的歌单（用 / 分隔）
-- source_url: 如果原文里有链接就提取，否则空
-- note: 报名方式、注意事项、联系方式等关键备注
+- time: 活动时间，自由文本
+- location: 具体地点（例如 "悠唐一层中庭"）
+- highlights: 现场配套，用 / 分隔（例如 "面光灯 / 背板 / 地贴 / 官摄"）
+- submit_deadline: 投稿截止时间（例如 "5.13 23:00"）
+- submit_email: 投稿邮箱
+- submit_info: 投稿要求 / 模板的完整内容（用户复制即用）
+- songs: 歌单（如果原文明确列出几首歌）
+- source_url: 原文里的链接，否则 ""
+- note: 其他关键备注
 
 规则：
 1. 只输出 JSON 对象，不要 markdown 代码块、不要解释。
 2. 抽取不到的字段输出空字符串 ""，不要瞎编。
-3. 找不到日期或活动名则相应字段返回空字符串。
-4. 如果完全不像随机舞蹈活动信息，返回 {"title": ""}。`;
+3. 如果完全不像随机舞蹈活动信息，返回 {"title": ""}。`;
 
   const messages = [
     { role: "system", content: systemPrompt },
