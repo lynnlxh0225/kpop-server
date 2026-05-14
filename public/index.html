@@ -4462,6 +4462,182 @@
     }
   }
 
+  // 把 AI / 本地识别返回的对象，应用到 modal 表单字段
+  function applyActivityFields(r) {
+    if (!r) return;
+    if (r.title)            document.getElementById("actTitle").value = r.title;
+    if (r.organizer)        document.getElementById("actOrganizer").value = r.organizer;
+    if (r.theme)            document.getElementById("actTheme").value = r.theme;
+    if (r.city && Array.from(document.getElementById("actCity").options).some(o => o.value === r.city)) {
+      document.getElementById("actCity").value = r.city;
+    }
+    if (r.district)         document.getElementById("actDistrict").value = r.district;
+    if (r.date)             document.getElementById("actDate").value = r.date;
+    if (r.time)             document.getElementById("actTime").value = r.time;
+    if (r.location)         document.getElementById("actLocation").value = r.location;
+    if (r.highlights)       document.getElementById("actHighlights").value = r.highlights;
+    if (r.submit_deadline)  document.getElementById("actSubmitDeadline").value = r.submit_deadline;
+    if (r.submit_email)     document.getElementById("actSubmitEmail").value = r.submit_email;
+    if (r.submit_info)      document.getElementById("actSubmitInfo").value = r.submit_info;
+    if (r.source_url)       document.getElementById("actSourceUrl").value = r.source_url;
+    if (r.note)             document.getElementById("actNote").value = r.note;
+  }
+
+  // ===================== 本地关键词识别（零延迟、零调用，不依赖 AI） =====================
+  function localExtractActivity() {
+    const text = document.getElementById("actAiText").value.trim();
+    if (!text) return toast("请先粘贴公告原文", true);
+
+    const r = localParseActivity(text);
+    applyActivityFields(r);
+
+    // 统计识别到几个字段
+    const filledCount = Object.entries(r).filter(([k, v]) => v && v.trim && v.trim()).length;
+    if (filledCount === 0) {
+      toast("⚡ 没识别到关键信息，试试 ✨ AI 解析", true);
+    } else {
+      toast(`⚡ 识别到 ${filledCount} 个字段，请核对`);
+    }
+  }
+
+  // 核心：正则 + 关键词匹配，返回活动字段对象
+  function localParseActivity(text) {
+    const r = {};
+    const t = text.replace(/\r/g, "");
+    const today = new Date();
+
+    // -------- 日期：识别 "5月16日" / "5.16" / "5/16" / "2026-05-16" --------
+    let m;
+    // YYYY-MM-DD
+    if ((m = t.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/))) {
+      const y = +m[1], mo = +m[2], d = +m[3];
+      r.date = `${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    }
+    // M月D日 → 默认今年（如果月份比当前小且日期已过，可能是明年，但保守用今年）
+    else if ((m = t.match(/(\d{1,2})月(\d{1,2})[日号]/))) {
+      const mo = +m[1], d = +m[2];
+      let y = today.getFullYear();
+      const test = new Date(y, mo - 1, d);
+      if (test < today && (today - test) > 30 * 86400000) y += 1; // 超过 30 天前则视为明年
+      r.date = `${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    }
+    // M.D / M/D 形式（避免和小数混淆，限定为合理范围 1-12 / 1-31）
+    else if ((m = t.match(/(?:^|[^\d])(\d{1,2})[./](\d{1,2})(?:\D|$)/))) {
+      const mo = +m[1], d = +m[2];
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+        let y = today.getFullYear();
+        const test = new Date(y, mo - 1, d);
+        if (test < today && (today - test) > 30 * 86400000) y += 1;
+        r.date = `${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      }
+    }
+
+    // -------- 时间：识别 "13:00" / "13:00-17:00" / "下午1点" --------
+    if ((m = t.match(/(\d{1,2})[:：](\d{2})\s*[-~–至到]\s*(\d{1,2})[:：](\d{2})/))) {
+      r.time = `${m[1]}:${m[2]}-${m[3]}:${m[4]}`;
+    } else if ((m = t.match(/(\d{1,2})[:：](\d{2})/))) {
+      r.time = `${m[1]}:${m[2]}`;
+    } else if ((m = t.match(/(上午|下午|中午|晚上)\s*(\d{1,2})\s*[点时]/))) {
+      r.time = `${m[1]} ${m[2]} 点`;
+    }
+
+    // -------- 邮箱 --------
+    if ((m = t.match(/[\w.+-]+@[\w-]+\.[\w.-]+/))) {
+      r.submit_email = m[0];
+    }
+
+    // -------- 投稿截止：找"截止"附近的日期时间 --------
+    const cutSeg = t.match(/(?:投稿\s*截止|截止|deadline)[^\n]{0,40}/i);
+    if (cutSeg) {
+      const seg = cutSeg[0];
+      let dm = seg.match(/(\d{1,2})[月.](\d{1,2})(?:[日号])?(?:\s*(?:晚上|晚)?\s*(\d{1,2})[:：](\d{2}))?/);
+      if (!dm) dm = seg.match(/(\d{1,2})\/(\d{1,2})(?:\s*(\d{1,2})[:：](\d{2}))?/);
+      if (dm) {
+        let s = `${dm[1]}.${dm[2]}`;
+        if (dm[3] && dm[4]) s += ` ${dm[3]}:${dm[4]}`;
+        else {
+          const hm = seg.match(/(\d{1,2})[:：](\d{2})/);
+          if (hm) s += ` ${hm[1]}:${hm[2]}`;
+        }
+        r.submit_deadline = s;
+      }
+    }
+
+    // -------- 主办方 / 期数 --------
+    if ((m = t.match(/(AQUA\s*DANCE|aqua\s*dance|YOLO|U-Studio|U\s*Studio)/i))) {
+      r.organizer = m[1].toUpperCase().replace(/\s+/g, " ");
+    }
+    // "第 X 期"
+    const phaseM = t.match(/第\s*(\d+)\s*期/) || t.match(/vol\.?\s*(\d+)/i);
+    if (phaseM) {
+      r.organizer = (r.organizer || "") + (r.organizer ? " " : "") + "第" + phaseM[1] + "期";
+    }
+
+    // -------- 专场（识别 K-pop 组合名 + "专场" 关键字）--------
+    const groupNames = ["aespa", "blackpink", "TWICE", "newjeans", "IVE", "ITZY", "LE SSERAFIM", "(G)I-DLE", "ILLIT", "NMIXX", "BABYMONSTER", "Red Velvet", "MAMAMOO", "fromis_9", "XG", "STAYC", "Apink", "EVERGLOW", "TWS", "RIIZE", "BOYNEXTDOOR"];
+    const foundGroups = [];
+    for (const g of groupNames) {
+      if (new RegExp(g.replace(/[()/-]/g, "\\$&"), "i").test(t)) foundGroups.push(g);
+    }
+    if (foundGroups.length) {
+      r.theme = foundGroups.join("+") + (t.includes("专场") ? " 专场" : "");
+    } else if (t.includes("新歌专场")) {
+      r.theme = "新歌专场";
+    } else if (t.includes("经典专场")) {
+      r.theme = "经典专场";
+    }
+
+    // -------- 城市识别 --------
+    const cityList = ["北京", "上海", "广州", "深圳", "成都", "杭州", "南京", "武汉", "西安", "重庆"];
+    for (const c of cityList) {
+      if (t.includes(c)) { r.city = c; break; }
+    }
+    // 北京特征关键词反推
+    if (!r.city) {
+      const beijingHints = ["三里屯", "悠唐", "五道口", "望京", "国贸", "西单", "朝阳", "海淀", "丰台", "通州"];
+      if (beijingHints.some((k) => t.includes(k))) r.city = "北京";
+    }
+
+    // -------- 现场配套 --------
+    const fac = [];
+    if (/官摄|官拍/.test(t)) fac.push("官摄");
+    if (/面光|面光灯/.test(t)) fac.push("面光灯");
+    if (/背板/.test(t)) fac.push("背板");
+    if (/地贴/.test(t)) fac.push("地贴");
+    if (/相机/.test(t)) fac.push("相机");
+    if (/直拍/.test(t)) fac.push("个人直拍");
+    if (fac.length) r.highlights = fac.join(" / ");
+
+    // -------- 具体地点（找"地点"/"于"/"地址"关键词附近的文字）--------
+    let locM = t.match(/(?:地点|于|地址)[:：]?\s*([^\n，。,；;]{2,30})/);
+    if (locM) r.location = locM[1].trim();
+    // 备用：找"X层中庭"/"X广场"
+    if (!r.location) {
+      let locM2 = t.match(/([一-龥\w]{2,15}(?:一层|二层|三层|中庭|广场|商场|大厦|练习室|studio))/i);
+      if (locM2) r.location = locM2[1];
+    }
+
+    // -------- 活动名（取第一行带 DANCE / 路演 / 随舞 / 期 的句子）--------
+    const lines = t.split(/\n/).map((s) => s.trim()).filter(Boolean);
+    for (const line of lines) {
+      if (/dance|路演|随舞|专场/i.test(line) && line.length <= 40) {
+        // 去掉零碎装饰字符
+        r.title = line.replace(/[（(\[].*?[)）\]]/g, "").trim();
+        break;
+      }
+    }
+    // 兜底：取第一行不长的
+    if (!r.title && lines[0] && lines[0].length <= 30) r.title = lines[0];
+
+    // -------- 投稿要求（截取"投稿"关键字附近的几行）--------
+    const submitIdx = t.search(/(投稿\s*格式|投稿要求|报名流程|投稿流程)/);
+    if (submitIdx >= 0) {
+      r.submit_info = t.slice(submitIdx, submitIdx + 600).trim();
+    }
+
+    return r;
+  }
+
   // 用 AI 从小红书原文里提字段（复用 /api/parse 的 prompt 思路，但简化为活动场景）
   let _aiExtractCooldownUntil = 0;
   let _aiExtractTimer = null;
