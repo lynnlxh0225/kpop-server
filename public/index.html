@@ -2012,20 +2012,16 @@
 <div class="modal-bg" id="addFriendModal">
   <div class="modal">
     <h3>添加好友</h3>
-    <p style="font-size:13px;color:var(--text-soft);">输入对方的 8 位邀请码，发送好友申请，对方接受后才会成为好友。</p>
+    <p style="font-size:13px;color:var(--text-soft);">输入对方的 8 位邀请码，直接互加成功。</p>
     <div class="form-grid">
       <div>
         <label class="field">对方邀请码</label>
-        <input id="addFriendCode" placeholder="例如：AB12CD34" maxlength="10" />
-      </div>
-      <div>
-        <label class="field">附言（可选）</label>
-        <input id="addFriendMsg" placeholder="例如：我是Lynn的朋友" maxlength="100" />
+        <input id="addFriendCode" placeholder="例如：AB12CD34" maxlength="10" style="text-transform:uppercase;letter-spacing:1px;" />
       </div>
     </div>
     <div class="footer">
       <button class="btn ghost" onclick="closeModal('addFriendModal')">取消</button>
-      <button class="btn" onclick="sendFriendRequest()">发送申请</button>
+      <button class="btn" onclick="sendFriendRequest()">添加</button>
     </div>
   </div>
 </div>
