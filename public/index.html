@@ -1656,18 +1656,31 @@
 <div class="modal-bg" id="submitActivityModal">
   <div class="modal">
     <h3>+ 发活动到随舞广场</h3>
-    <details style="margin-bottom:12px;">
-      <summary style="cursor:pointer;font-size:13px;color:var(--primary);">📥 从小红书 / 微信原文 AI 提取</summary>
+    <details style="margin-bottom:12px;" open>
+      <summary style="cursor:pointer;font-size:13px;color:var(--primary);">📥 从公告原文识别（推荐：先点⚡本地，识别不全再上 AI）</summary>
       <div style="margin-top:8px;">
-        <textarea id="actAiText" placeholder="把小红书帖子全文 / 群消息原文粘进来，AI 自动填字段..." style="min-height:80px;"></textarea>
-        <button class="btn small" onclick="aiExtractActivity()" style="margin-top:6px;">✨ AI 解析</button>
-        <p style="font-size:11px;color:var(--text-soft);margin:6px 0 0;">解析后字段会填到下面，你可以核对修改再提交</p>
+        <textarea id="actAiText" placeholder="把整段公告 / 小红书 / 群消息粘进来..." style="min-height:90px;"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+          <button class="btn small ghost" onclick="localExtractActivity()">⚡ 本地识别</button>
+          <button class="btn small" onclick="aiExtractActivity()">✨ AI 解析</button>
+        </div>
+        <p style="font-size:11px;color:var(--text-soft);margin:6px 0 0;">⚡ 本地识别零延迟，关键词匹配；✨ AI 更聪明但偶尔限流。识别后字段填到下面，核对修改再提交。</p>
       </div>
     </details>
     <div class="form-grid">
       <div>
         <label class="field">活动名 *</label>
-        <input id="actTitle" placeholder="例如：三里屯太古里随舞 / 五道口随舞 vol.7" />
+        <input id="actTitle" placeholder="AQUA DANCE 第24期 / 三里屯太古里随舞" />
+      </div>
+      <div class="row-2">
+        <div>
+          <label class="field">主办方</label>
+          <input id="actOrganizer" placeholder="AQUA DANCE / 悠唐 / ..." />
+        </div>
+        <div>
+          <label class="field">专场主题</label>
+          <input id="actTheme" placeholder="aespa+TWS / 新歌 / 经典" />
+        </div>
       </div>
       <div class="row-2">
         <div>
@@ -1688,7 +1701,7 @@
         </div>
         <div>
           <label class="field">区 / 街道</label>
-          <input id="actDistrict" placeholder="朝阳 / 海淀 ..." />
+          <input id="actDistrict" placeholder="朝阳 / 海淀" />
         </div>
       </div>
       <div class="row-2">
@@ -1698,24 +1711,43 @@
         </div>
         <div>
           <label class="field">时间</label>
-          <input id="actTime" placeholder="14:00-17:00 / 周六下午" />
+          <input id="actTime" placeholder="13:00 / 14:00-17:00" />
         </div>
       </div>
       <div>
         <label class="field">具体地点</label>
-        <input id="actLocation" placeholder="例如：三里屯太古里南区中心广场" />
+        <input id="actLocation" placeholder="例如：悠唐一层中庭" />
       </div>
       <div>
-        <label class="field">歌单</label>
-        <input id="actSongs" placeholder="Whiplash / Maestro / 多首歌用 / 隔开" />
+        <label class="field">现场配套</label>
+        <input id="actHighlights" placeholder="面光灯 / 背板 / 地贴 / 官摄" />
       </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+        <label class="field" style="color:var(--primary);">📮 投稿信息（路演专属）</label>
+      </div>
+      <div class="row-2">
+        <div>
+          <label class="field">投稿截止</label>
+          <input id="actSubmitDeadline" placeholder="5.13 23:00" />
+        </div>
+        <div>
+          <label class="field">投稿邮箱</label>
+          <input id="actSubmitEmail" placeholder="xxx@xxx.com" />
+        </div>
+      </div>
+      <div>
+        <label class="field">投稿要求 / 格式</label>
+        <textarea id="actSubmitInfo" placeholder="歌名+团名 / 组名 / 组长 / 组员+位置 / 联系方式..." style="min-height:60px;"></textarea>
+      </div>
+
       <div>
         <label class="field">来源链接</label>
-        <input id="actSourceUrl" placeholder="小红书帖子 / 微博 / 公众号链接（可选）" />
+        <input id="actSourceUrl" placeholder="小红书 / 微博 / 公众号链接（可选）" />
       </div>
       <div>
-        <label class="field">备注</label>
-        <textarea id="actNote" placeholder="报名方式、活动方联系、注意事项..." style="min-height:50px;"></textarea>
+        <label class="field">其他备注</label>
+        <textarea id="actNote" placeholder="补充说明..." style="min-height:50px;"></textarea>
       </div>
       <label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-soft);cursor:pointer;line-height:1.5;">
         <input type="checkbox" id="actAgreed" style="margin:3px 0 0;flex-shrink:0;" />
