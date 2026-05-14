@@ -4445,13 +4445,13 @@
       .catch(() => toast("复制失败，请手动选中链接复制", true));
   }
   async function regenerateMyInvite() {
-    if (!confirm("重置后旧邀请码立即失效，已通过旧码加你的好友不受影响。继续？")) return;
+    if (!confirm("换一个新邀请码后：\n• 旧码立即失效，新人不能再用旧码加你\n• 已加上的好友不受影响\n\n继续？")) return;
     try {
       const r = await API.post("/auth/regenerate-invite");
       state.user.invite_code = r.invite_code;
       renderHeader();
       renderSettings();
-      toast("已生成新邀请码");
+      toast("已换新邀请码");
     } catch (e) { toast(e.message, true); }
   }
   function openEditProfileModal() {
