@@ -5305,6 +5305,40 @@
   // ===================== 通用 =====================
   function openModal(id) { document.getElementById(id).classList.add("active"); }
   function closeModal(id) { document.getElementById(id).classList.remove("active"); }
+
+  // ===================== 导航 =====================
+  // 点击排练/路演的地点 → 弹出 actionSheet 选地图 App
+  // 各家地图都支持地名直接传中文，地图 App 内自己模糊匹配
+  function openNavSheet(location, city) {
+    const loc = (location || "").trim();
+    if (!loc) return toast("没有地点信息", true);
+    // 拼接 city + location 提升匹配准确度（地图 App 跨城市搜索时会带城市过滤）
+    const dest = city && !loc.includes(city) ? `${city}${loc}` : loc;
+    const encoded = encodeURIComponent(dest);
+    const targets = [
+      { name: "高德地图",  icon: "🧭", color: "#1e6cdb",
+        url: `https://uri.amap.com/navigation?to=${encoded}&mode=car&callnative=1&src=kpop-server` },
+      { name: "百度地图",  icon: "📍", color: "#3385ff",
+        url: `https://api.map.baidu.com/direction?destination=${encoded}&mode=driving&output=html&src=webapp.kpop` },
+      { name: "腾讯地图",  icon: "🗺️", color: "#00b96b",
+        url: `https://apis.map.qq.com/uri/v1/routeplan?type=drive&to=${encoded}&referer=kpop-server` },
+      { name: "苹果地图",  icon: "🍎", color: "#000",
+        url: `http://maps.apple.com/?daddr=${encoded}&dirflg=d` },
+    ];
+    document.getElementById("navSheetDest").textContent = "📍 " + dest;
+    document.getElementById("navSheetOptions").innerHTML = targets.map(t => `
+      <a href="${escapeAttr(t.url)}" target="_blank" rel="noopener"
+         onclick="closeModal('navSheet');"
+         style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;
+                border:1px solid var(--border);background:#fff;text-decoration:none;color:var(--text);
+                font-size:14px;font-weight:600;">
+        <span style="font-size:20px;">${t.icon}</span>
+        <span>${escapeHtml(t.name)}</span>
+        <span style="margin-left:auto;color:var(--text-soft);font-size:12px;">打开 →</span>
+      </a>`).join("");
+    openModal("navSheet");
+  }
+
   document.querySelectorAll(".modal-bg").forEach(bg => {
     bg.addEventListener("click", e => { if (e.target === bg) bg.classList.remove("active"); });
   });
