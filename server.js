@@ -2101,6 +2101,62 @@ app.post("/api/activities", authRequired, (req, res) => {
   res.json({ id, status: "pending", message: "已提交，等管理员审核（一般 24h 内）" });
 });
 
+// AI 辅助：从小红书原文 / 群消息提取活动字段
+app.post("/api/activities/ai-extract", authRequired, parseLimiter, async (req, res) => {
+  const text = (req.body && req.body.text || "").toString().trim();
+  if (!text) return res.status(400).json({ error: "请粘贴原文" });
+  if (text.length > 5000) return res.status(400).json({ error: "原文太长（上限 5000 字）" });
+
+  // 复用每日配额
+  try { consumeQuota(req.userId, "parse"); } catch (e) {
+    return res.status(e.statusCode || 502).json({ error: e.message });
+  }
+
+  const today = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+  const systemPrompt = `你是 K-pop 随舞活动信息提取助手。从用户给的一段小红书 / 微博 / 微信原文里抽取活动字段，输出严格 JSON。
+
+字段：
+- title: 活动名（必填）
+- city: 城市名（仅在 [北京/上海/广州/深圳/成都/杭州/南京/武汉/西安/重庆/其它] 中选）
+- district: 区或街道（如：朝阳、海淀、太古里）
+- date: YYYY-MM-DD（相对日期"明天/周六"按今天 ${todayIso} 换算）
+- time: HH:MM-HH:MM 或自由文本时间
+- location: 具体地点
+- songs: 要跳的歌单（用 / 分隔）
+- source_url: 如果原文里有链接就提取，否则空
+- note: 报名方式、注意事项、联系方式等关键备注
+
+规则：
+1. 只输出 JSON 对象，不要 markdown 代码块、不要解释。
+2. 抽取不到的字段输出空字符串 ""，不要瞎编。
+3. 找不到日期或活动名则相应字段返回空字符串。
+4. 如果完全不像随机舞蹈活动信息，返回 {"title": ""}。`;
+
+  const messages = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: `今天 ${todayIso}\n\n原文：\n${text}\n\n按规则输出 JSON。` },
+  ];
+
+  let raw;
+  try {
+    raw = await callAI(messages);
+  } catch (e) {
+    console.error("[activities/ai-extract] AI 调用失败:", e.message);
+    return res.status(e.statusCode || 502).json({ error: e.message || "AI 调用失败" });
+  }
+  const parsed = extractJson(raw);
+  if (!parsed) return res.status(502).json({ error: "AI 输出不是合法 JSON" });
+
+  // 过滤：城市必须在白名单
+  if (parsed.city && !VALID_CITIES.has(parsed.city)) parsed.city = "";
+  // 日期必须是合法格式且不早于今天
+  if (parsed.date && !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) parsed.date = "";
+  res.json(parsed);
+});
+
 // 我去 / 感兴趣（toggle）
 app.post("/api/activities/:id/interest", authRequired, (req, res) => {
   const id = parseInt(req.params.id, 10);
