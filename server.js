@@ -2256,7 +2256,7 @@ app.post("/api/activities/ai-extract", authRequired, parseLimiter, async (req, r
   res.json(parsed);
 });
 
-// 我去 / 感兴趣（toggle）
+// 添加一个兴趣标签（我去 或 感兴趣），可同时持有两个
 app.post("/api/activities/:id/interest", authRequired, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const status = req.body && req.body.status;
@@ -2268,14 +2268,25 @@ app.post("/api/activities/:id/interest", authRequired, (req, res) => {
   if (a.status !== "approved") return res.status(403).json({ error: "活动暂未公开" });
   db.prepare(`
     INSERT INTO activity_interests (activity_id, user_id, status, created_at) VALUES (?, ?, ?, ?)
-    ON CONFLICT(activity_id, user_id) DO UPDATE SET status=excluded.status
+    ON CONFLICT(activity_id, user_id, status) DO NOTHING
   `).run(id, req.userId, status, now());
-  res.json({ ok: true, status });
+  res.json({ ok: true });
 });
 
+// 取消一个兴趣标签；不传 status 则全部取消
 app.delete("/api/activities/:id/interest", authRequired, (req, res) => {
   const id = parseInt(req.params.id, 10);
-  db.prepare("DELETE FROM activity_interests WHERE activity_id=? AND user_id=?").run(id, req.userId);
+  const status = req.query.status;
+  if (status) {
+    if (!["going", "interested"].includes(status)) {
+      return res.status(400).json({ error: "status 不合法" });
+    }
+    db.prepare("DELETE FROM activity_interests WHERE activity_id=? AND user_id=? AND status=?")
+      .run(id, req.userId, status);
+  } else {
+    db.prepare("DELETE FROM activity_interests WHERE activity_id=? AND user_id=?")
+      .run(id, req.userId);
+  }
   res.json({ ok: true });
 });
 
