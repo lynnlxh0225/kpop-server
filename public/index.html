@@ -2214,9 +2214,11 @@
     });
   }
 
-  // ===================== 女团成员表 =====================
+  // ===================== K-pop 团体成员表 =====================
   // 用于新建歌曲时根据组合名自动建议位置占位
+  // 团名用最常见的官方/英文拼写为 key；别名（中文、缩写、其它拼法）见下方 KPOP_ALIASES
   const KPOP_GROUPS = {
+    // ====== 4th / 5th gen 女团（活跃）======
     "aespa":         ["Karina", "Winter", "Giselle", "Ningning"],
     "BLACKPINK":     ["Jisoo", "Jennie", "Rosé", "Lisa"],
     "TWICE":         ["Nayeon", "Jeongyeon", "Momo", "Sana", "Jihyo", "Mina", "Dahyun", "Chaeyoung", "Tzuyu"],
@@ -2226,29 +2228,233 @@
     "LE SSERAFIM":   ["Sakura", "Chaewon", "Yunjin", "Kazuha", "Eunchae"],
     "(G)I-DLE":      ["Miyeon", "Minnie", "Soyeon", "Yuqi", "Shuhua"],
     "ILLIT":         ["Yunah", "Minju", "Moka", "Wonhee", "Iroha"],
-    "KISS OF LIFE":  ["Belle", "Julie", "Natty", "Haneul"],
+    "KISS OF LIFE":  ["Julie", "Natty", "Belle", "Haneul"],
     "NMIXX":         ["Lily", "Haewon", "Sullyoon", "Bae", "Jiwoo", "Kyujin"],
     "BABYMONSTER":   ["Ruka", "Pharita", "Asa", "Ahyeon", "Rami", "Rora", "Chiquita"],
-    "Red Velvet":    ["Irene", "Seulgi", "Wendy", "Joy", "Yeri"],
-    "MAMAMOO":       ["Solar", "Moonbyul", "Wheein", "Hwasa"],
-    "fromis_9":      ["Saerom", "Hayoung", "Gyuri", "Jiwon", "Jisun", "Seoyeon", "Chaeyoung", "Nagyung", "Jiheon"],
     "XG":            ["Jurin", "Chisa", "Hinata", "Harvey", "Jia", "Maya", "Cocona"],
     "STAYC":         ["Sumin", "Sieun", "Isa", "Seeun", "Yoon", "J"],
-    "Apink":         ["Chorong", "Bomi", "Eunji", "Namjoo", "Hayoung"],
+    "Kep1er":        ["Yujin", "Xiaoting", "Mashiro", "Chaehyun", "Dayeon", "Hikaru", "Bahiyyih", "Youngeun"],
+    "fromis_9":      ["Saerom", "Hayoung", "Gyuri", "Jiwon", "Jisun", "Seoyeon", "Chaeyoung", "Nagyung", "Jiheon"],
     "EVERGLOW":      ["E:U", "Sihyeon", "Mia", "Onda", "Aisha", "Yiren"],
-    "Kep1er":        ["Yujin", "Xiaoting", "Mashiro", "Chaehyun", "Dayeon", "Hikaru", "Huening Bahiyyih", "Youngeun"],
+    "WJSN":          ["Seola", "Bona", "Exy", "Soobin", "Luda", "Dawon", "Eunseo", "Cheng Xiao", "Mei Qi", "Xuan Yi", "Yeoreum", "Dayoung", "Yeonjung"],
+    "VIVIZ":         ["Eunha", "SinB", "Umji"],
+    "Billlie":       ["Moon Sua", "Suhyeon", "Haram", "Tsuki", "Sheon", "Siyoon", "Haruna"],
+    "tripleS":       ["S1 Yoon Seoyeon", "S2 Jung Hyeyeon", "S3 Lee Jiwoo", "S4 Kim Chaeyeon", "S5 Kim Yooyeon", "S6 Kim Sooyeon", "S7 Kim Nakyoung", "S8 Park Sohyun", "S9 Choi Yubin", "S10 Kotone", "S11 Xinyu", "S12 Mayu", "S13 Lynn", "S14 Joobin", "S15 Seoah", "S16 Chaewon", "S17 Sullin", "S18 Seoyeon", "S19 Jiyeon", "S20 Nien", "S21 Juhyeon", "S22 Sohyun", "S23 Hyerin", "S24 Yeonji"],
+    "LIGHTSUM":      ["Sangah", "Chowon", "Nayoung", "Hina", "Juhyeon", "Yujeong", "Huiyeon"],
+    "Purple Kiss":   ["Park Jieun", "Goeun", "Dosie", "Ireh", "Yuki", "Chaein", "Swan"],
+    "Weeekly":       ["Soojin", "Monday", "Soeun", "Jaehee", "Jiyoon", "Zoa", "Zoeu"],
+    "Cherry Bullet": ["Haeyoon", "Yuju", "Bora", "Jiwon", "Remi", "Chaerin", "May"],
+    "Dreamcatcher":  ["JiU", "SuA", "Siyeon", "Handong", "Yoohyeon", "Dami", "Gahyeon"],
+    "Rocket Punch":  ["Yeonhee", "Juri", "Suyun", "Yunkyoung", "Sohee", "Dahyun"],
+    "TRI.BE":        ["Songsun", "Kelly", "Jia", "Hyunbin", "Jinha", "Soeun", "Mire"],
+    "Lapillus":      ["Chanty", "Shana", "Yue", "Bessie", "Seowon", "Haeun"],
+    "VCHA":          ["Lexi", "Camila", "Kaylee", "Savanna", "KG", "Kendall"],
+
+    // ====== 3rd gen 女团（仍活跃 / 单飞活跃）======
+    "Red Velvet":    ["Irene", "Seulgi", "Wendy", "Joy", "Yeri"],
+    "MAMAMOO":       ["Solar", "Moonbyul", "Wheein", "Hwasa"],
+    "OH MY GIRL":    ["Hyojung", "Mimi", "YooA", "Seunghee", "Jiho", "Binnie", "Arin"],
+    "GFRIEND":       ["Sowon", "Yerin", "Eunha", "Yuju", "SinB", "Umji"],
+    "Lovelyz":       ["Babysoul", "Jiae", "Jisoo", "Mijoo", "Kei", "JIN", "Sujeong", "Yein"],
+    "GIDLE":         ["Miyeon", "Minnie", "Soyeon", "Yuqi", "Shuhua"], // alias
+    "Apink":         ["Chorong", "Bomi", "Eunji", "Namjoo", "Hayoung"],
+    "AOA":           ["Choa", "Jimin", "Yuna", "Hyejeong", "Mina", "Seolhyun", "Chanmi"],
+    "GUGUDAN":       ["Hyeyeon", "Haebin", "Nayoung", "Sejeong", "Sally", "Soyee", "Mimi", "Hana", "Mina"],
+
+    // ====== 2nd gen 经典女团 ======
+    "Girls' Generation": ["Taeyeon", "Sunny", "Tiffany", "Hyoyeon", "Yuri", "Sooyoung", "Yoona", "Seohyun"],
+    "2NE1":          ["CL", "Dara", "Bom", "Minzy"],
+    "f(x)":          ["Victoria", "Amber", "Luna", "Krystal"],
+    "Wonder Girls":  ["Yenny", "Sunmi", "Yubin", "Sohee", "Hyerim"],
+    "miss A":        ["Fei", "Jia", "Min", "Suzy"],
+    "KARA":          ["Gyuri", "Seungyeon", "Nicole", "Jiyoung", "Youngji"],
+    "T-ARA":         ["Qri", "Boram", "Soyeon", "Eunjung", "Hyomin", "Jiyeon"],
+    "Sistar":        ["Hyolyn", "Bora", "Soyou", "Dasom"],
+    "After School":  ["Kahi", "Jungah", "Bekah", "Raina", "Nana", "Lizzy", "E-Young", "Kaeun"],
+    "4Minute":       ["Jihyun", "Gayoon", "Jiyoon", "HyunA", "Sohyun"],
+    "Brown Eyed Girls": ["JeA", "Miryo", "Narsha", "Ga-in"],
+    "IZ*ONE":        ["Wonyoung", "Sakura", "Yujin", "Chaeyeon", "Yena", "Eunbi", "Hyewon", "Chaewon", "Minju", "Nako", "Hitomi", "Yuri"],
+    "IOI":           ["Im Nayoung", "Kim Chungha", "Kim Sejeong", "Jung Chaeyeon", "Zhou Jieqiong", "Kim Sohye", "Yoo Yeonjung", "Choi Yoojung", "Kang Mina", "Kim Doyeon", "Somi"],
+
+    // ====== 男团（活跃）======
+    "BTS":           ["RM", "Jin", "Suga", "J-Hope", "Jimin", "V", "Jungkook"],
+    "SEVENTEEN":     ["S.Coups", "Jeonghan", "Joshua", "Jun", "Hoshi", "Wonwoo", "Woozi", "DK", "Mingyu", "The8", "Seungkwan", "Vernon", "Dino"],
+    "Stray Kids":    ["Bang Chan", "Lee Know", "Changbin", "Hyunjin", "Han", "Felix", "Seungmin", "I.N"],
+    "ATEEZ":         ["Hongjoong", "Seonghwa", "Yunho", "Yeosang", "San", "Mingi", "Wooyoung", "Jongho"],
+    "ENHYPEN":       ["Heeseung", "Jay", "Jake", "Sunghoon", "Sunoo", "Jungwon", "Ni-ki"],
+    "TXT":           ["Yeonjun", "Soobin", "Beomgyu", "Taehyun", "Hueningkai"],
+    "TWS":           ["Shinyu", "Dohoon", "Youngjae", "Hanjin", "Jihoon", "Kyungmin"],
+    "RIIZE":         ["Shotaro", "Eunseok", "Sungchan", "Wonbin", "Sohee", "Anton"],
+    "BOYNEXTDOOR":   ["Sungho", "Riwoo", "Jaehyun", "Taesan", "Leehan", "Woonhak"],
+    "ZEROBASEONE":   ["Sung Hanbin", "Kim Jiwoong", "Zhang Hao", "Seok Matthew", "Kim Taerae", "Ricky", "Kim Gyuvin", "Park Gunwook", "Han Yujin"],
+    "NCT 127":       ["Taeyong", "Taeil", "Johnny", "Yuta", "Doyoung", "Jaehyun", "Jungwoo", "Mark", "Haechan"],
+    "NCT DREAM":     ["Mark", "Renjun", "Jeno", "Haechan", "Jaemin", "Chenle", "Jisung"],
+    "WayV":          ["Kun", "Ten", "Xiaojun", "Hendery", "YangYang"],
+    "EXO":           ["Xiumin", "Suho", "Lay", "Baekhyun", "Chen", "Chanyeol", "D.O.", "Kai", "Sehun"],
+    "SHINee":        ["Onew", "Key", "Minho", "Taemin"],
+    "BIGBANG":       ["G-Dragon", "T.O.P", "Taeyang", "Daesung"],
+    "Super Junior":  ["Leeteuk", "Heechul", "Yesung", "Shindong", "Sungmin", "Eunhyuk", "Donghae", "Siwon", "Ryeowook", "Kyuhyun"],
+    "iKON":          ["Jay", "Song", "Ju-ne", "DK", "Bobby", "Chan"],
+    "GOT7":          ["JB", "Mark", "Jackson", "Jinyoung", "Youngjae", "BamBam", "Yugyeom"],
+    "MONSTA X":      ["Shownu", "Minhyuk", "Kihyun", "Hyungwon", "Joohoney", "I.M"],
+    "DAY6":          ["Sungjin", "Jae", "Young K", "Wonpil", "Dowoon"],
+    "Pentagon":      ["Hui", "Jinho", "Hongseok", "Shinwon", "Yan An", "Yeo One", "Yuto", "Kino", "Wooseok"],
+    "The Boyz":      ["Sangyeon", "Jacob", "Younghoon", "Hyunjae", "Juyeon", "Kevin", "New", "Q", "Haknyeon", "Sunwoo", "Eric"],
+    "AB6IX":         ["Woong", "Donghyun", "Woojin", "Daehwi"],
+    "P1Harmony":     ["Keeho", "Theo", "Jiung", "Intak", "Soul", "Jongseob"],
+    "CRAVITY":       ["Serim", "Allen", "Jungmo", "Woobin", "Wonjin", "Minhee", "Hyeongjun", "Taeyoung"],
+    "TEMPEST":       ["Hanbin", "Hyeongseop", "Eunchan", "Hwarang", "Lew", "Taerae", "Hyuk"],
+    "xikers":        ["Minjae", "Junmin", "Sumin", "Jinsik", "Hyunwoo", "Yujun", "Junghoon", "Hunter", "Yechan", "Seeun"],
+    "DRIPPIN":       ["Cha Junho", "Hwang Yunseong", "Lee Hyeop", "Kim Dongyun", "Joo Changuk", "Alex", "Kim Minseo"],
+    "VICTON":        ["Seungsik", "Sejun", "Chan", "Hanse", "Subin", "Byungchan"],
+
+    // ====== 个人艺人（常翻跳）======
+    "HyunA":         ["HyunA"],
+    "Sunmi":         ["Sunmi"],
+    "Chungha":       ["Chungha"],
+    "Taeyeon":       ["Taeyeon"],
+    "IU":            ["IU"],
+    "Hwasa":         ["Hwasa"],
+    "Jihyo":         ["Jihyo"],
+    "Jennie":        ["Jennie"],
+    "Lisa":          ["Lisa"],
+    "Jisoo":         ["Jisoo"],
+    "Rosé":          ["Rosé"],
+    "Somi":          ["Somi"],
+    "Yena":          ["Yena"],
   };
-  // 别名归一化（接受常见拼法 / 大小写 / 全角 / 简写）
+
+  // 别名表：用户输入这些名字 → 映射到上面 KPOP_GROUPS 的 key
+  // key 是 normalizeArtist 后的形式（小写、去空格、去特殊符号）
+  const KPOP_ALIASES = {
+    // SNSD
+    "snsd": "Girls' Generation", "girlsgeneration": "Girls' Generation",
+    "soshi": "Girls' Generation", "少女时代": "Girls' Generation", "少女时代snsd": "Girls' Generation",
+    // (G)I-DLE
+    "gidle": "(G)I-DLE", "idle": "(G)I-DLE", "大爆炸": "(G)I-DLE",
+    // BLACKPINK
+    "粉墨": "BLACKPINK", "bp": "BLACKPINK",
+    // TWICE
+    "推子": "TWICE", "twice": "TWICE",
+    // NewJeans
+    "njz": "NewJeans", "新泽西": "NewJeans",
+    // 中文常见
+    "宇宙少女": "WJSN", "cosmicgirls": "WJSN",
+    "防弹少年团": "BTS", "防弹": "BTS",
+    "十七": "SEVENTEEN",
+    "skz": "Stray Kids", "迷子": "Stray Kids",
+    "海贼": "ATEEZ",
+    "梦之队": "NCT DREAM",
+    "nct127": "NCT 127",
+    "ive": "IVE", "ive少女": "IVE",
+    "itzy": "ITZY",
+    "fearless": "LE SSERAFIM", "lesserafim": "LE SSERAFIM",
+    "bm": "BABYMONSTER", "宝宝怪兽": "BABYMONSTER",
+    "babymonsters": "BABYMONSTER",
+    "kol": "KISS OF LIFE",
+    // 数字团
+    "2ne1": "2NE1",
+    "4minute": "4MINUTE",  // 后备 key
+    "sistar19": "Sistar",
+    "missa": "miss A",
+    "tara": "T-ARA", "ttara": "T-ARA",
+    "fx": "f(x)",
+    "ohmygirl": "OH MY GIRL", "omg": "OH MY GIRL",
+    "gfriend": "GFRIEND", "yeoja": "GFRIEND",
+    "redvelvet": "Red Velvet", "rv": "Red Velvet",
+    "mamamoo": "MAMAMOO",
+    "iz*one": "IZ*ONE", "izone": "IZ*ONE",
+    "wjsn": "WJSN",
+    "kep1er": "Kep1er", "kepler": "Kep1er",
+    "txt": "TXT", "tomorrowxtogether": "TXT",
+    "enhypen": "ENHYPEN",
+    "tws": "TWS",
+    "riize": "RIIZE",
+    "bnd": "BOYNEXTDOOR", "boynextdoor": "BOYNEXTDOOR",
+    "zb1": "ZEROBASEONE", "zerobaseone": "ZEROBASEONE",
+    "wayv": "WayV",
+    "exo": "EXO",
+    "shinee": "SHINee",
+    "bigbang": "BIGBANG",
+    "superjunior": "Super Junior", "sj": "Super Junior", "suju": "Super Junior",
+    "ikon": "iKON",
+    "got7": "GOT7",
+    "monstax": "MONSTA X", "mx": "MONSTA X",
+    "day6": "DAY6",
+    "pentagon": "Pentagon",
+    "theboyz": "The Boyz", "tbz": "The Boyz",
+    "ab6ix": "AB6IX",
+    "p1harmony": "P1Harmony",
+    "cravity": "CRAVITY",
+    "tempest": "TEMPEST",
+    "xikers": "xikers",
+    "drippin": "DRIPPIN",
+    "victon": "VICTON",
+    "viviz": "VIVIZ",
+    "billlie": "Billlie", "bilie": "Billlie",
+    "triples": "tripleS",
+    "lightsum": "LIGHTSUM",
+    "purplekiss": "Purple Kiss",
+    "weeekly": "Weeekly",
+    "cherrybullet": "Cherry Bullet",
+    "dreamcatcher": "Dreamcatcher", "梦想捕手": "Dreamcatcher",
+    "rocketpunch": "Rocket Punch",
+    "tribe": "TRI.BE",
+    "lapillus": "Lapillus",
+    "vcha": "VCHA",
+    "stayc": "STAYC",
+    "everglow": "EVERGLOW",
+    "fromis9": "fromis_9", "fromis": "fromis_9",
+    "apink": "Apink",
+    "aoa": "AOA",
+    "gugudan": "GUGUDAN",
+    "lovelyz": "Lovelyz",
+    "afterschool": "After School",
+    "wondergirls": "Wonder Girls",
+    "kara": "KARA",
+    "browneyedgirls": "Brown Eyed Girls", "beg": "Brown Eyed Girls",
+    "ioi": "IOI",
+    "xg": "XG",
+    "illit": "ILLIT", "magnetic": "ILLIT",
+    "aespa": "aespa", "에스파": "aespa",
+    "newjeans": "NewJeans",
+    "blackpink": "BLACKPINK",
+    "twice": "TWICE",
+    "bts": "BTS", "방탄소년단": "BTS",
+    "seventeen": "SEVENTEEN", "svt": "SEVENTEEN",
+    "straykids": "Stray Kids",
+    "ateez": "ATEEZ",
+    "iu": "IU", "李知恩": "IU",
+    "taeyeon": "Taeyeon", "金泰妍": "Taeyeon",
+    "jennie": "Jennie",
+    "lisa": "Lisa",
+    "rose": "Rosé", "rosé": "Rosé",
+    "jisoo": "Jisoo",
+    "sunmi": "Sunmi",
+    "hyuna": "HyunA",
+    "chungha": "Chungha",
+    "hwasa": "Hwasa",
+    "somi": "Somi",
+    "jihyo": "Jihyo",
+    "yena": "Yena",
+  };
+
+  // 把字符串归一化：小写 + 去空格 / 特殊符号
   function normalizeArtist(s) {
     if (!s) return "";
     return s.trim().toLowerCase()
-      .replace(/[\(\(\)\)\s\-_\.·・]/g, "")
-      .replace(/girlsgeneration/g, "snsd");
+      .replace(/[\(\(\)\)\s\-_\.·・\*!！]/g, "");
   }
   const _normalizedGroupMap = (() => {
     const map = {};
+    // 直接 key
     for (const [name, members] of Object.entries(KPOP_GROUPS)) {
       map[normalizeArtist(name)] = { name, members };
+    }
+    // 别名映射 → 真正的 key
+    for (const [alias, target] of Object.entries(KPOP_ALIASES)) {
+      const real = KPOP_GROUPS[target];
+      if (real) map[normalizeArtist(alias)] = { name: target, members: real };
     }
     return map;
   })();
