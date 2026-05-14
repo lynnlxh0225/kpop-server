@@ -4322,7 +4322,7 @@
             ${myInterested ? '✓ 感兴趣' : '感兴趣'}
           </button>
           ${a.going_count ? `<span style="font-size:12px;color:var(--text-soft);">👥 ${a.going_count} 人去</span>` : ''}
-          ${a.interests_count > a.going_count ? `<span style="font-size:12px;color:var(--text-soft);">· ${a.interests_count - a.going_count} 感兴趣</span>` : ''}
+          ${interestedCount ? `<span style="font-size:12px;color:var(--text-soft);">${a.going_count ? '·' : ''} ${interestedCount} 感兴趣</span>` : ''}
         </div>
       </div>`;
   }
