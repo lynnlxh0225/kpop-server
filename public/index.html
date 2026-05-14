@@ -3607,9 +3607,12 @@
           </div>
         </div>` : '';
 
+      const plazaBadge = p.activity_id
+        ? `<span class="badge" style="background:var(--primary-soft);color:var(--primary-deep);" title="关联到广场活动 ID ${p.activity_id}">📌 广场</span>`
+        : '';
       return `
         <div class="item-card">
-          <h4>🎤 ${escapeHtml(p.name)} <span class="badge" style="background:${st.bg};color:${st.text};">${st.label}</span></h4>
+          <h4>🎤 ${escapeHtml(p.name)} <span class="badge" style="background:${st.bg};color:${st.text};">${st.label}</span> ${plazaBadge}</h4>
           <div class="row">📅 ${escapeHtml(p.date || '日期未定')} ${escapeHtml(p.time || '')}</div>
           ${p.city || p.location ? `<div class="row">📍 ${escapeHtml(p.city || '')}${p.city && p.location ? ' · ' : ''}${escapeHtml(p.location || '')}</div>` : ''}
           ${ownerImgsHtml}
