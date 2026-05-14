@@ -103,6 +103,12 @@ db.exec(`
     position_slots TEXT NOT NULL DEFAULT '[]',
     private INTEGER NOT NULL DEFAULT 0,
     claimed INTEGER NOT NULL DEFAULT 1,
+    -- 招募相关
+    recruiting INTEGER NOT NULL DEFAULT 0,        -- 0/1：是否在招募
+    recruit_note TEXT NOT NULL DEFAULT '',        -- 招募说明：大致排练时间地点、要求
+    recruit_open_slots TEXT NOT NULL DEFAULT '[]',-- JSON：开放给申请的位置（slot 名）
+    recruit_city TEXT NOT NULL DEFAULT '',        -- 招募所在城市（按广场城市筛）
+    recruit_started_at INTEGER,
     created_at INTEGER NOT NULL,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
   );
