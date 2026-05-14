@@ -1576,7 +1576,8 @@
       <div class="row-2">
         <div>
           <label class="field">原唱 / 组合</label>
-          <input id="songArtist" placeholder="例如：aespa" oninput="onArtistInput()" onblur="onArtistInput()" />
+          <input id="songArtist" placeholder="例如：aespa" oninput="onArtistInput()" onblur="onArtistInput()" list="artistOptions" autocomplete="off" />
+          <datalist id="artistOptions"></datalist>
         </div>
         <div>
           <label class="field">类型</label>
