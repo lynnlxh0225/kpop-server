@@ -3571,9 +3571,12 @@
   async function saveRehearsal() {
     const date = document.getElementById("rehDate").value;
     if (!date) return toast("请选择日期", true);
+    const tFrom = document.getElementById("rehTimeFrom").value;
+    const tTo = document.getElementById("rehTimeTo").value;
+    const time = joinTimeRange(tFrom, tTo);
     const body = {
       date,
-      time: document.getElementById("rehTime").value.trim(),
+      time,
       location: document.getElementById("rehLocation").value.trim(),
       outfit: document.getElementById("rehOutfit").value.trim(),
       notes: document.getElementById("rehNotes").value.trim(),
