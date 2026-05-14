@@ -4721,15 +4721,56 @@
     "actSubmitDeadline", "actSubmitEmail", "actSubmitInfo",
     "actSourceUrl", "actNote", "actAiText",
   ];
-  function openSubmitActivityModal() {
+  // editingActivityId === null → 新建；> 0 → 编辑模式（提交时 PATCH，改完回到 pending 再审）
+  let editingActivityId = null;
+  function openSubmitActivityModal(activity) {
+    editingActivityId = (activity && activity.id) ? activity.id : null;
+    // 标题 + 提交按钮文案随模式变化
+    document.getElementById("submitActivityModalTitle").textContent =
+      editingActivityId ? "✏️ 修改活动信息" : "+ 发活动到随舞广场";
+    document.getElementById("submitActivityBtn").textContent =
+      editingActivityId ? "重新提交审核" : "提交审核";
     _actFields.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
-    document.getElementById("actCity").value = document.getElementById("plazaCity").value || "北京";
+    document.getElementById("actCity").value = (document.getElementById("plazaCity") || {}).value || "北京";
     document.getElementById("actAgreed").checked = false;
-    // 截止日期/时间也清空
     const d = document.getElementById("actSubmitDeadlineDate");
     const t = document.getElementById("actSubmitDeadlineTime");
     if (d) d.value = "";
     if (t) t.value = "";
+    if (editingActivityId && activity) {
+      // 把已有字段回填
+      const map = {
+        actTitle: "title", actOrganizer: "organizer", actTheme: "theme",
+        actDistrict: "district", actDate: "date", actTime: "time",
+        actLocation: "location", actHighlights: "highlights",
+        actSubmitDeadline: "submit_deadline", actSubmitEmail: "submit_email",
+        actSubmitInfo: "submit_info", actSourceUrl: "source_url", actNote: "note",
+      };
+      Object.entries(map).forEach(([dom, key]) => {
+        const el = document.getElementById(dom);
+        if (el && activity[key] != null) el.value = activity[key] || "";
+      });
+      // 城市下拉
+      const citySel = document.getElementById("actCity");
+      if (activity.city && Array.from(citySel.options).some(o => o.value === activity.city)) {
+        citySel.value = activity.city;
+      }
+      // 截止时间拆解
+      if (activity.submit_deadline) {
+        const dm = activity.submit_deadline.match(/(\d{1,2})\.(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
+        if (dm) {
+          const today = new Date();
+          let y = today.getFullYear();
+          const mo = +dm[1], dd = +dm[2];
+          const test = new Date(y, mo - 1, dd);
+          if (test < today && (today - test) > 30 * 86400000) y += 1;
+          if (d) d.value = `${y}-${String(mo).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+          if (dm[3] && dm[4] && t) t.value = `${dm[3].padStart(2,"0")}:${dm[4]}`;
+        }
+      }
+      // 编辑模式默认勾上承诺（已经勾过）
+      document.getElementById("actAgreed").checked = true;
+    }
     openModal("submitActivityModal");
   }
   // 把 date + time 拼成 "M.D HH:MM" 存进 hidden submit_deadline
