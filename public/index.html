@@ -1424,7 +1424,7 @@
         </select>
         <button class="btn ghost small" id="adminReviewBtn" onclick="openAdminReview()" style="display:none;">🔍 待审核 (<span id="adminPendingCount">0</span>)</button>
       </div>
-      <p style="font-size:12px;color:var(--text-soft);margin:8px 0 0;">💡 这里是用户提交的随机舞蹈活动公告，过期自动隐藏。<a onclick="showMyActivities()" style="color:var(--primary);cursor:pointer;">查看我提交的</a></p>
+      <p style="font-size:12px;color:var(--text-soft);margin:8px 0 0;text-align:right;"><a onclick="showMyActivities()" style="color:var(--primary);cursor:pointer;">我提交的 →</a></p>
     </div>
 
     <div id="plazaList" style="margin-top:14px;"></div>
@@ -3730,23 +3730,30 @@
       const plazaBadge = p.activity_id
         ? `<span class="badge" style="background:var(--primary-soft);color:var(--primary-deep);" title="关联到广场活动 ID ${p.activity_id}">📌 广场</span>`
         : '';
+      // 合并时间地点行
+      const metaParts = [];
+      if (p.date) metaParts.push(p.date + (p.time ? ' ' + p.time : ''));
+      const locStr = [p.city, p.location].filter(Boolean).join(' · ');
+      if (locStr) metaParts.push(locStr);
+      const metaLine = metaParts.length
+        ? `<div class="row" style="color:var(--text-soft);">${metaParts.map(escapeHtml).join(' · ')}</div>`
+        : '';
       return `
         <div class="item-card">
-          <h4>🎤 ${escapeHtml(p.name)} <span class="badge" style="background:${st.bg};color:${st.text};">${st.label}</span> ${plazaBadge}</h4>
-          <div class="row">📅 ${escapeHtml(p.date || '日期未定')} ${escapeHtml(p.time || '')}</div>
-          ${p.city || p.location ? `<div class="row">📍 ${escapeHtml(p.city || '')}${p.city && p.location ? ' · ' : ''}${escapeHtml(p.location || '')}</div>` : ''}
+          <h4>${escapeHtml(p.name)} <span class="badge" style="background:${st.bg};color:${st.text};">${st.label}</span> ${plazaBadge}</h4>
+          ${metaLine}
           ${ownerImgsHtml}
-          ${p.notes ? `<div class="row">📝 ${escapeHtml(p.notes)}</div>` : ''}
+          ${p.notes ? `<div class="row">${escapeHtml(p.notes)}</div>` : ''}
           ${attHtml ? `<div style="margin-top:8px;">${attHtml}</div>` : ''}
           ${myAttHtml}
           ${myOutfitHtml}
           ${othersHtml}
           ${ownerActions ? `<div class="actions">${ownerActions}</div>` : ''}
         </div>`;
-    }).join("") : `<div class="empty"><span class="emoji">🎤</span><div>还没有路演计划</div></div>`;
+    }).join("") : `<div class="empty"><span class="emoji">🎤</span><div>还没有路演</div></div>`;
     c.innerHTML = `
       <div class="page-header">
-        <h2 style="font-size:16px;">路演活动（共 ${list.length} 场）</h2>
+        <h2 style="font-size:16px;">路演 · ${list.length}</h2>
         ${isOwner ? `<button class="btn small" onclick="openPerfModal()">+ 添加</button>` : ''}
       </div>
       ${itemsHtml}`;
@@ -4543,8 +4550,8 @@
       list.innerHTML = `
         <div class="empty">
           <span class="emoji">🌍</span>
-          <div>这个城市还没有近期活动</div>
-          <div style="font-size:12px;color:var(--text-soft);margin-top:6px;">看到小红书 / 群里有？点右上「+ 发活动」分享给大家</div>
+          <div>这个城市暂无近期活动</div>
+          <div style="font-size:12px;color:var(--text-soft);margin-top:6px;">点右上「+ 发活动」分享给大家</div>
         </div>`;
       return;
     }
