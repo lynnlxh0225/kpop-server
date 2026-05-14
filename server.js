@@ -344,6 +344,10 @@ try {
     db.exec("ALTER TABLE users ADD COLUMN source TEXT NOT NULL DEFAULT ''");
     console.log("🔧 已为旧 users 表补 source 列");
   }
+  if (!uCols.some((c) => c.name === "dance_tags")) {
+    db.exec("ALTER TABLE users ADD COLUMN dance_tags TEXT NOT NULL DEFAULT '[]'");
+    console.log("🔧 已为旧 users 表补 dance_tags 列");
+  }
 } catch (e) {
   console.error("users 迁移失败：", e.message);
 }
