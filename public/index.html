@@ -2324,6 +2324,7 @@
       if (btn) btn.classList.add("active");
     }
     if (tab === "inbox") renderInbox();
+    if (tab === "plaza") loadPlaza();
     // 切换页面后滚回顶部（手机端尤其重要）
     window.scrollTo({ top: 0, behavior: "instant" });
     // 同步到浏览器历史，让系统左滑返回手势能"返回上一个 tab"
