@@ -3848,14 +3848,20 @@
     const summary = document.getElementById("perfSelectedSummary");
     if (!_perfSelectedActivityId) { summary.style.display = "none"; return; }
     const a = _perfPlazaActivities.find(x => x.id === _perfSelectedActivityId);
-    if (!a) { summary.style.display = "none"; return; }
-    const loc = [a.district, a.location].filter(Boolean).join(" · ");
+    // fallback：从已填入的核心字段读，覆盖"活动不在当前城市缓存里"的情况
+    const title = a?.title || document.getElementById("perfName").value || "（关联广场活动）";
+    const date = a?.date || document.getElementById("perfDate").value || "";
+    const time = a?.time || document.getElementById("perfTime").value || "";
+    const city = a?.city || document.getElementById("perfCity").value || "";
+    const loc = a
+      ? [a.district, a.location].filter(Boolean).join(" · ")
+      : document.getElementById("perfLocation").value || "";
     summary.style.display = "";
     summary.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;">📌 ${escapeHtml(a.title)}</div>
-          <div style="font-size:12px;margin-top:2px;opacity:0.85;">${escapeHtml(a.date || '')} ${escapeHtml(a.time || '')} · ${escapeHtml(a.city || '')}${loc ? ' · ' + escapeHtml(loc) : ''}</div>
+          <div style="font-weight:600;">📌 ${escapeHtml(title)}</div>
+          <div style="font-size:12px;margin-top:2px;opacity:0.85;">${escapeHtml(date)} ${escapeHtml(time)} · ${escapeHtml(city)}${loc ? ' · ' + escapeHtml(loc) : ''}</div>
         </div>
         <a href="#" onclick="event.preventDefault();clearPerfSelection();" style="font-size:12px;color:var(--primary-deep);text-decoration:underline;flex:0 0 auto;">换一个</a>
       </div>`;
