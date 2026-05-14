@@ -4506,17 +4506,7 @@
     toast("✨ AI 解析中…（约 5-10 秒）");
     try {
       const r = await API.post("/activities/ai-extract", { text });
-      if (r.title)      document.getElementById("actTitle").value = r.title;
-      if (r.city && Array.from(document.getElementById("actCity").options).some(o => o.value === r.city)) {
-        document.getElementById("actCity").value = r.city;
-      }
-      if (r.district)   document.getElementById("actDistrict").value = r.district;
-      if (r.date)       document.getElementById("actDate").value = r.date;
-      if (r.time)       document.getElementById("actTime").value = r.time;
-      if (r.location)   document.getElementById("actLocation").value = r.location;
-      if (r.songs)      document.getElementById("actSongs").value = r.songs;
-      if (r.source_url) document.getElementById("actSourceUrl").value = r.source_url;
-      if (r.note)       document.getElementById("actNote").value = r.note;
+      applyActivityFields(r);
       toast("✅ 字段已填，请核对");
       if (btn) { btn.disabled = false; btn.innerHTML = original || "✨ AI 解析"; }
     } catch (e) {
