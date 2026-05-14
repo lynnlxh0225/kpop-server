@@ -3289,7 +3289,35 @@
       <button class="btn small" onclick="openAddMemberModal()">+ 添加好友</button>
     ` : '';
 
+    // 招募状态条（仅车主可见 + 可点击）
+    let recruitBanner = '';
+    if (isOwner) {
+      if (s.recruiting) {
+        // 待审申请数（异步加载，先占位）
+        recruitBanner = `
+          <div id="recruitStatusBanner" style="background:#fef3c7;color:#92400e;padding:10px 12px;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-weight:600;">🙋 招募中</span>
+            <span style="font-size:12px;">· ${escapeHtml(s.recruit_city || '')}</span>
+            <span id="recruitPendingCount" style="font-size:12px;"></span>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+              <button class="btn ghost small" onclick="openRecruitSettingsModal()">编辑</button>
+              <button class="btn ghost small" onclick="openApplicationsReview()">查看申请</button>
+              <button class="btn ghost small" onclick="closeRecruitForSong()">关闭招募</button>
+            </div>
+          </div>`;
+        // 异步刷新待审计数
+        setTimeout(refreshPendingApplicationCount, 0);
+      } else {
+        recruitBanner = `
+          <div style="background:var(--bg);padding:10px 12px;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;color:var(--text-soft);">想招新队员？把这首歌发到广场招募</span>
+            <button class="btn small" style="margin-left:auto;" onclick="openRecruitSettingsModal()">🙋 开放招募</button>
+          </div>`;
+      }
+    }
+
     document.getElementById("sub-team").innerHTML = `
+      ${recruitBanner}
       <div class="page-header">
         <h2 style="font-size:16px;">队伍（${active.length} / ${slots.length || active.length} 位）</h2>
         ${actionHtml}
@@ -3301,6 +3329,141 @@
         ${emptyHint}
       </div>
     `;
+  }
+
+  // ===================== 车主：招募管理 =====================
+  async function refreshPendingApplicationCount() {
+    const sid = currentSongId;
+    if (!sid) return;
+    try {
+      const r = await API.get(`/songs/${sid}/applications`);
+      const pending = (r.applications || []).filter(a => a.status === 'pending').length;
+      const el = document.getElementById("recruitPendingCount");
+      if (el) el.textContent = pending ? `· 待审 ${pending}` : '· 暂无待审';
+    } catch {}
+  }
+
+  function openRecruitSettingsModal() {
+    const s = findSong(currentSongId); if (!s) return;
+    if (s.my_role !== 'owner') return toast("仅车主可操作", true);
+    const slots = Array.isArray(s.position_slots) ? s.position_slots : [];
+    if (!slots.length) return toast("请先在「队伍」里添加位置", true);
+    // 当前的 open_slots（如果在招募中）；否则默认全选
+    let openSlots = [];
+    try { openSlots = JSON.parse(s.recruit_open_slots || '[]'); } catch {}
+    if (!s.recruiting && !openSlots.length) openSlots = slots.slice();
+    const occupied = (s.team || []).filter(t => t.status === 'active').map(t => t.position).filter(Boolean);
+    document.getElementById("recruitCity").value = s.recruit_city || localStorage.getItem("kpop_plaza_city") || "北京";
+    document.getElementById("recruitNote").value = s.recruit_note || "";
+    // slot chips
+    document.getElementById("recruitSlotsBox").innerHTML = slots.map(name => {
+      const isOccupied = occupied.includes(name);
+      const checked = openSlots.includes(name);
+      return `
+        <label class="slot-chip" style="display:inline-flex;align-items:center;gap:6px;cursor:${isOccupied ? 'not-allowed' : 'pointer'};opacity:${isOccupied ? '0.5' : '1'};">
+          <input type="checkbox" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} ${isOccupied ? 'disabled' : ''} />
+          <span>${escapeHtml(name)}</span>
+          ${isOccupied ? '<span style="font-size:10px;color:var(--text-soft);">已占</span>' : ''}
+        </label>`;
+    }).join("");
+    document.getElementById("recruitModalTitle").textContent = s.recruiting ? "编辑招募" : "开放招募";
+    document.getElementById("recruitSaveBtn").textContent = s.recruiting ? "保存" : "开启招募";
+    openModal("recruitSettingsModal");
+  }
+
+  async function saveRecruitSettings() {
+    const s = findSong(currentSongId); if (!s) return;
+    const city = document.getElementById("recruitCity").value;
+    const note = document.getElementById("recruitNote").value.trim();
+    const open_slots = Array.from(document.querySelectorAll("#recruitSlotsBox input[type=checkbox]:checked")).map(c => c.value);
+    if (!open_slots.length) return toast("至少勾一个开放位置", true);
+    try {
+      await API.post(`/songs/${s.id}/recruit`, { city, note, open_slots });
+      toast(s.recruiting ? "✓ 招募信息已更新" : "🎉 招募已开启，去广场看看");
+      closeModal("recruitSettingsModal");
+      await loadSongs();
+      renderTeam();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function closeRecruitForSong() {
+    if (!confirm("关闭招募后：\n• 这首歌从广场招募列表下架\n• 所有待审申请会被自动取消\n继续？")) return;
+    const s = findSong(currentSongId); if (!s) return;
+    try {
+      const r = await API.del(`/songs/${s.id}/recruit`);
+      toast(r.cancelled_count ? `已关闭招募，自动取消 ${r.cancelled_count} 个待审申请` : "已关闭招募");
+      await loadSongs();
+      renderTeam();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // 车主：审核申请弹窗
+  async function openApplicationsReview() {
+    const s = findSong(currentSongId); if (!s) return;
+    if (s.my_role !== 'owner') return toast("仅车主可操作", true);
+    try {
+      const r = await API.get(`/songs/${s.id}/applications`);
+      const apps = r.applications || [];
+      const old = document.getElementById("applicationsReviewModal");
+      if (old) old.remove();
+      const statusBadge = {
+        pending: '<span class="badge" style="background:#fef3c7;color:#92400e;">待审</span>',
+        approved: '<span class="badge" style="background:#d1fae5;color:#047857;">已通过</span>',
+        rejected: '<span class="badge" style="background:#fee2e2;color:#b91c1c;">已拒</span>',
+        cancelled: '<span class="badge" style="background:#f3f4f6;color:#6b7280;">已取消</span>',
+      };
+      const box = document.createElement("div");
+      box.className = "modal-bg active";
+      box.id = "applicationsReviewModal";
+      box.innerHTML = `
+        <div class="modal" style="max-width:520px;">
+          <h3>📥 申请审核（${apps.length}）</h3>
+          <div style="max-height:60vh;overflow-y:auto;">
+            ${apps.length ? apps.map(a => `
+              <div class="item-card" style="margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                  <span style="font-size:18px;">${a.applicant_avatar || '👤'}</span>
+                  <h4 style="margin:0;font-size:14px;flex:1;">${escapeHtml(a.applicant_name)}</h4>
+                  ${statusBadge[a.status] || ''}
+                </div>
+                <div style="font-size:12px;color:var(--text-soft);">申请位置：${escapeHtml(a.position || '?')}</div>
+                ${a.message ? `<div style="font-size:12px;color:var(--text);margin-top:6px;background:var(--bg);padding:6px 8px;border-radius:6px;">💬 ${escapeHtml(a.message)}</div>` : ''}
+                ${a.status === 'pending' ? `
+                  <div class="actions" style="margin-top:8px;">
+                    <button class="btn small" onclick="approveApplication(${a.id})">✓ 批准</button>
+                    <button class="btn small ghost" onclick="rejectApplicationPrompt(${a.id})">✗ 拒绝</button>
+                  </div>
+                ` : ''}
+                ${a.status === 'rejected' && a.reject_reason ? `<div style="font-size:11px;color:var(--danger);margin-top:4px;">原因：${escapeHtml(a.reject_reason)}</div>` : ''}
+              </div>`).join("") : '<div class="empty"><div>暂无申请</div></div>'}
+          </div>
+          <div class="footer">
+            <button class="btn ghost" onclick="document.getElementById('applicationsReviewModal').remove()">关闭</button>
+          </div>
+        </div>`;
+      document.body.appendChild(box);
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function approveApplication(id) {
+    try {
+      const r = await API.post(`/applications/${id}/approve`);
+      if (r.auto_closed) toast("✓ 已批准。位置满员，招募已自动关闭");
+      else toast("✓ 已批准，对方已入队");
+      await loadSongs();
+      renderTeam();
+      openApplicationsReview();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function rejectApplicationPrompt(id) {
+    const reason = prompt("（可选）填一个拒绝原因，对方能看到：", "");
+    if (reason === null) return; // 取消
+    try {
+      await API.post(`/applications/${id}/reject`, { reason });
+      toast("已拒绝");
+      openApplicationsReview();
+    } catch (e) { toast(e.message, true); }
   }
 
   // 添加成员到歌曲
