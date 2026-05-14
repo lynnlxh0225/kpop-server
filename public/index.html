@@ -1562,9 +1562,24 @@
         <div><span id="setAvatar"></span> <b id="setName"></b></div>
         <div id="setEmail" style="font-family:Monaco,monospace;font-size:12px;color:var(--text-soft);"></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         <button class="btn ghost small" onclick="openEditProfileModal()">编辑资料</button>
+        <button class="btn ghost small" onclick="openMyReviews()">📥 我收到的评价</button>
         <button class="btn danger small" onclick="logout()">退出</button>
+      </div>
+    </div>
+
+    <div class="setting-card">
+      <h3>💃 我的跳舞标签</h3>
+      <p style="font-size:12px;color:var(--text-soft);margin:0 0 8px;">让队友更了解你（最多 12 个）</p>
+      <div id="myDanceTagsBox" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="newDanceTagInput" placeholder="例如：主舞担" maxlength="20" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addDanceTag();}" />
+        <button class="btn small ghost" onclick="addDanceTag()">+ 加</button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--text-soft);">推荐：</span>
+        ${['主舞担','rap 担','vocal 担','队长','门面','可周末练','可工作日晚练','能跳男团','能跳女团','灵活档期','直拍能 c','气氛担当'].map(t => `<span class="slot-chip" style="cursor:pointer;font-size:11px;" onclick="quickAddDanceTag('${t.replace(/'/g, "\\'")}')">${t}</span>`).join("")}
       </div>
     </div>
     <div class="setting-card">
