@@ -1416,13 +1416,17 @@
   <section class="page" id="page-plaza">
     <div class="page-header">
       <h2>🌍 随舞广场</h2>
-      <button class="btn" id="plazaAddBtn" onclick="onPlazaAddClick()">+ 发活动</button>
     </div>
 
     <!-- 二级 tab：活动 / 招募 -->
     <div class="plaza-subtabs" style="display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:10px;margin-bottom:10px;">
       <button class="btn small" data-plaza-sub="activity" onclick="switchPlazaSub('activity')" style="flex:1;">📋 活动</button>
       <button class="btn small ghost" data-plaza-sub="recruit" onclick="switchPlazaSub('recruit')" style="flex:1;">🙋 招募</button>
+    </div>
+
+    <!-- 子内容头：随当前二级 tab 显示不同的发布按钮 -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <button class="btn" id="plazaAddBtn" onclick="onPlazaAddClick()">+ 发活动</button>
     </div>
 
     <!-- 城市切换 + 管理员入口 -->
