@@ -2913,8 +2913,7 @@
     } catch (e) { toast(e.message, true); }
   }
   function renderHeader() {
-    document.getElementById("userChip").innerHTML = `${state.user.avatar} ${escapeHtml(state.user.name)}`;
-    document.getElementById("myCodeView").textContent = `📣 我的邀请码 ${state.user.invite_code}`;
+    document.getElementById("userChip").innerHTML = `${state.user.avatar || '👤'} ${escapeHtml(state.user.name)}`;
   }
 
   // ===================== Tab =====================
