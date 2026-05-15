@@ -2056,11 +2056,23 @@
 <div class="modal-bg" id="addFriendModal">
   <div class="modal">
     <h3>添加好友</h3>
-    <p style="font-size:13px;color:var(--text-soft);">输入对方的 8 位邀请码，直接互加成功。</p>
+
+    <!-- 我的邀请码（发给朋友让 TA 加我） -->
+    <div style="background:var(--primary-soft);padding:12px 14px;border-radius:10px;margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--primary-deep);margin-bottom:6px;font-weight:600;">📣 我的邀请码（发给朋友）</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <code id="addFriendMyCode" style="flex:1;font-size:18px;font-weight:700;color:var(--primary-deep);letter-spacing:3px;background:#fff;padding:6px 10px;border-radius:6px;text-align:center;">--------</code>
+        <button class="btn small ghost" onclick="copyMyCode()">复制码</button>
+        <button class="btn small" onclick="copyMyLink()">复制链接</button>
+      </div>
+    </div>
+
+    <!-- 输入对方邀请码 -->
     <div class="form-grid">
       <div>
-        <label class="field">对方邀请码</label>
+        <label class="field">用对方邀请码加 TA</label>
         <input id="addFriendCode" placeholder="例如：AB12CD34" maxlength="10" style="text-transform:uppercase;letter-spacing:1px;" />
+        <p style="font-size:11px;color:var(--text-soft);margin:4px 0 0;">输入对方 8 位邀请码，直接互加，不用对方确认</p>
       </div>
     </div>
     <div class="footer">
