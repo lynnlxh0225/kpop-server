@@ -5145,7 +5145,13 @@
   function renderRecommendedTags() {
     const box = document.getElementById("recommendedTagsBox");
     if (!box) return;
-    const presets = ['主舞担','rap 担','vocal 担','队长','门面','可周末练','可工作日晚练','能跳男团','能跳女团','灵活档期','直拍能 c','气氛担当'];
+    // 跳舞偏好（不是团里"位置"，而是"我喜欢跳什么风格"）
+    const presets = [
+      '女团', '男团', '中性',
+      '性感', '活力', '可爱', '酷飒', '优雅', '燃曲', '抒情',
+      '能高强度', '偏轻量',
+      '可周末练', '可工作日晚练',
+    ];
     const have = (state.user.dance_tags || []).map(x => x.toLowerCase());
     const html = ['<span style="font-size:11px;color:var(--text-soft);">推荐：</span>']
       .concat(presets
