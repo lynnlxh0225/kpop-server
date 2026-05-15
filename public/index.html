@@ -5414,9 +5414,22 @@
             </div>
           </div>`;
       }).join("");
+      // 列表顶部：新建歌曲入口卡（虚线边框 + 主题色，区别于普通卡）
+      const newSongEntry = `
+        <div class="item-card" style="margin-bottom:8px;cursor:pointer;border:2px dashed var(--primary);background:var(--primary-soft);"
+             onclick="document.getElementById('recruitSongPickerModal').remove();openSongModal();">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:22px;">＋</span>
+            <div style="flex:1;min-width:0;">
+              <h4 style="margin:0;font-size:14px;color:var(--primary-deep);">新建一首歌</h4>
+              <div style="font-size:12px;color:var(--primary-deep);opacity:0.8;margin-top:2px;">建完歌再设招募</div>
+            </div>
+            <span style="color:var(--primary);">→</span>
+          </div>
+        </div>`;
       body = `
         <p style="font-size:12px;color:var(--text-soft);margin:0 0 12px;">选一首你是车主的歌，开放招募</p>
-        <div style="max-height:60vh;overflow-y:auto;">${items}</div>
+        <div style="max-height:60vh;overflow-y:auto;">${newSongEntry}${items}</div>
         <div class="footer">
           <button class="btn ghost" onclick="document.getElementById('recruitSongPickerModal').remove()">关闭</button>
         </div>`;
