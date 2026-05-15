@@ -5407,7 +5407,7 @@
         </div>
         <div class="footer">
           <button class="btn ghost" onclick="document.getElementById('recruitSongPickerModal').remove()">关闭</button>
-          <button class="btn" onclick="document.getElementById('recruitSongPickerModal').remove();switchTab('songs');openSongModal()">+ 新建歌曲</button>
+          <button class="btn" onclick="document.getElementById('recruitSongPickerModal').remove();_autoOpenRecruitAfterCreate=true;switchTab('songs');openSongModal()">+ 新建歌曲</button>
         </div>`;
     } else {
       const items = myOwnedSongs.map(s => {
