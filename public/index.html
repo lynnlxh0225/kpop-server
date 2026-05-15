@@ -3244,6 +3244,8 @@
     if (inp) inp.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); addSongSlot(); } });
   });
 
+  // 从招募入口新建歌曲时设这个 flag → 保存后自动跳详情 + 打开招募 modal
+  let _autoOpenRecruitAfterCreate = false;
   async function saveSong() {
     const title = document.getElementById("songTitle").value.trim();
     if (!title) return toast("请填写歌曲名", true);
@@ -3266,13 +3268,24 @@
       // self 不传 → 后端默认 req.userId
     }
     try {
+      const wasNew = !editingSongId;
+      let resp = null;
       if (editingSongId) await API.patch(`/songs/${editingSongId}`, body);
-      else await API.post(`/songs`, body);
+      else resp = await API.post(`/songs`, body);
       await loadSongs();
       renderSongs();
       if (currentSongId === editingSongId) openSongDetail(currentSongId);
       closeModal("songModal");
-      toast("已保存");
+      // 从招募入口建的歌 → 自动跳到详情页 + 打开招募 modal
+      if (wasNew && _autoOpenRecruitAfterCreate && resp && resp.song) {
+        _autoOpenRecruitAfterCreate = false;
+        currentSongId = resp.song.id;
+        openSongDetail(resp.song.id);
+        setTimeout(() => openRecruitSettingsModal(), 350);
+        toast("已建好歌，下面填招募信息");
+      } else {
+        toast("已保存");
+      }
     } catch (e) { toast(e.message, true); }
   }
   // ===================== 生成分享图 =====================
