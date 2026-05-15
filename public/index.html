@@ -5370,9 +5370,57 @@
     if (_plazaSub === "activity") {
       openSubmitActivityModal();
     } else {
-      // 招募是在歌曲详情页操作的，引导用户去歌曲页
-      toast("去「歌曲」选一首你是车主的歌，里面有「开放招募」入口");
+      openRecruitSongPicker();
     }
+  }
+
+  // 招募发布 → 弹一个"选一首歌"的小弹窗
+  function openRecruitSongPicker() {
+    const myOwnedSongs = state.songs.filter(s => s.my_role === 'owner');
+    const old = document.getElementById("recruitSongPickerModal");
+    if (old) old.remove();
+    const box = document.createElement("div");
+    box.className = "modal-bg active";
+    box.id = "recruitSongPickerModal";
+    let body;
+    if (!myOwnedSongs.length) {
+      body = `
+        <div class="empty" style="padding:30px;">
+          <span class="emoji">🎵</span>
+          <div>你还不是任何歌曲的车主</div>
+          <div style="font-size:12px;color:var(--text-soft);margin-top:6px;">先去「歌曲」新建一首歌（自己当车主）</div>
+        </div>
+        <div class="footer">
+          <button class="btn ghost" onclick="document.getElementById('recruitSongPickerModal').remove()">关闭</button>
+          <button class="btn" onclick="document.getElementById('recruitSongPickerModal').remove();switchTab('songs');openSongModal()">+ 新建歌曲</button>
+        </div>`;
+    } else {
+      const items = myOwnedSongs.map(s => {
+        const statusLabel = s.recruiting
+          ? '<span class="badge" style="background:#fef3c7;color:#92400e;">已在招募</span>'
+          : '';
+        return `
+          <div class="item-card" style="margin-bottom:8px;cursor:pointer;"
+               onclick="document.getElementById('recruitSongPickerModal').remove();openSongDetail(${s.id});setTimeout(()=>openRecruitSettingsModal(),400);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <div style="flex:1;min-width:0;">
+                <h4 style="margin:0;font-size:14px;">${escapeHtml(s.title)}</h4>
+                <div style="font-size:12px;color:var(--text-soft);margin-top:2px;">${escapeHtml(s.artist || '未知组合')}</div>
+              </div>
+              ${statusLabel}
+              <span style="color:var(--primary);">→</span>
+            </div>
+          </div>`;
+      }).join("");
+      body = `
+        <p style="font-size:12px;color:var(--text-soft);margin:0 0 12px;">选一首你是车主的歌，开放招募</p>
+        <div style="max-height:60vh;overflow-y:auto;">${items}</div>
+        <div class="footer">
+          <button class="btn ghost" onclick="document.getElementById('recruitSongPickerModal').remove()">关闭</button>
+        </div>`;
+    }
+    box.innerHTML = `<div class="modal" style="max-width:480px;"><h3>🙋 发布招募</h3>${body}</div>`;
+    document.body.appendChild(box);
   }
   function onPlazaCityChange() {
     if (_plazaSub === "activity") loadPlaza();
